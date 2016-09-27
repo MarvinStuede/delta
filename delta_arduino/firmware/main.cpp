@@ -45,10 +45,10 @@ bool a_set_reset = false, b_set_reset = false, c_set_reset = false;
 bool set_reset = false;
 bool enable = false;
 int write_freq=0;
-float factor =0.3;
+float factor =0.15;
 int loop_iteration = 0;
 int sendRate = 5;
-
+bool sendWSMsg = true;
 
 enum state
 {
@@ -56,6 +56,7 @@ enum state
     STATE_INIT,
     STATE_RESET,
     STATE_WAITING,
+    STATE_MOVING,
 
 }state_;
 state oldstate_;
@@ -104,7 +105,18 @@ void sendAngle(){
   dtostrf(c_angle, 4, 5, angle3str);
   sprintf(output,"POS %s %s %s",angle1str,angle2str,angle3str);
 
-  Serial.print(output);
+}
+void printAngles(char *output){
+  char a_angle_str[10];
+  char b_angle_str[10];
+  char c_angle_str[10];
+  float a_angle = -a_stepper.currentPosition()*360/stepsCircle;
+  float b_angle = -a_stepper.currentPosition()*360/stepsCircle;
+  float c_angle = -a_stepper.currentPosition()*360/stepsCircle;
+  dtostrf(a_angle, 4, 2, a_angle_str);
+  dtostrf(b_angle, 4, 2, b_angle_str);
+  dtostrf(c_angle, 4, 2, c_angle_str);
+  sprintf(output,"t1: %s t2: %s t3: %s",a_angle_str,b_angle_str,c_angle_str);
 }
 void checkEndstops(){
   //angle to set robot on top of workspace -15.4315 is for z=-285
@@ -122,64 +134,76 @@ void checkEndstops(){
     if (set_reset) c_stepper.moveTo(-RESETANGLE*stepsCircle/360);
   }
 }
-
-void setResetPos()
-{
-
-    a_stepper.move(100*stepsCircle/360);
-    b_stepper.move(100*stepsCircle/360);
-    c_stepper.move(100*stepsCircle/360);
-    //a_stepper.setSpeed(stepsCircle/4);
-    //b_stepper.setSpeed(stepsCircle/4);
-    //c_stepper.setSpeed(stepsCircle/4);
-
-}
 bool checkWorkspace(){
-  int a_angle = -a_stepper.currentPosition()*360/stepsCircle;
-  int b_angle = -b_stepper.currentPosition()*360/stepsCircle;
-  int c_angle = -c_stepper.currentPosition()*360/stepsCircle;
-  if (a_angle < 90 && b_angle < 90 && c_angle < 90){
-    if (a_angle > 0 && b_angle > 0 && c_angle > 0){
-      return TRUE;
+  float a_angle = -a_stepper.currentPosition()*360/stepsCircle;
+  float b_angle = -b_stepper.currentPosition()*360/stepsCircle;
+  float c_angle = -c_stepper.currentPosition()*360/stepsCircle;
+
+  if (state_ == STATE_RESET) return true;
+  else if (a_angle <= 90.0 && b_angle <= 90.0 && c_angle <= 90.0){
+    if (a_angle >= 0.0 && b_angle >= 0.0 && c_angle >= 0.0){
+      return true;
     }
-    else if (a_set_reset == TRUE || b_set_reset == TRUE || c_set_reset == TRUE){
-      return TRUE;
-    }
-    else return FALSE;
+    else return false;
   }
-  else return FALSE;
+  else return false;
 }
 
 void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
 
-  if(enable&&!a_set_reset&&!b_set_reset&&!c_set_reset){
-      float angle1 = cmdAngle.theta1,a1diff=0;
-      float angle2 = cmdAngle.theta2,a2diff=0;
-      float angle3 = cmdAngle.theta3,a3diff=0;
+  if(enable){
+    if(state_ = STATE_WAITING){
 
-      if (!isnan(angle1) && !isnan(angle2) && !isnan(angle3)){
-        a1diff=a_stepper.currentPosition() - angle1*stepsCircle/360;
-        a_stepper.move(-a1diff);
+      float cmd_theta1 = cmdAngle.theta1 * stepsCircle/360;
+      float cmd_theta2 = cmdAngle.theta2 * stepsCircle/360;
+      float cmd_theta3 = cmdAngle.theta3 * stepsCircle/360;
 
-        a2diff=b_stepper.currentPosition() - angle2*stepsCircle/360;
-        b_stepper.move(-a2diff);
+      float act_theta1 = a_stepper.currentPosition();
+      float act_theta2 = b_stepper.currentPosition();
+      float act_theta3 = c_stepper.currentPosition();
 
-        a3diff=c_stepper.currentPosition() - angle3*stepsCircle/360;
-        c_stepper.move(-a3diff);
+      float theta1_diff = cmd_theta1 - act_theta1;
+      float theta2_diff = cmd_theta2 - act_theta2;
+      float theta3_diff = cmd_theta3 - act_theta3;
 
+      //Check if commanded angles are numbers and at least one motor should move more than one step
+      if (!isnan(cmd_theta1) && !isnan(cmd_theta2) && !isnan(cmd_theta3)){
+
+          if (abs(theta1_diff) >= 1|| abs(theta2_diff) >= 1 || abs(theta3_diff) >= 1){
+            a_stepper.move(theta1_diff);
+            b_stepper.move(theta2_diff);
+            c_stepper.move(theta3_diff);
+
+            oldstate_ = state_;
+            state_ = STATE_MOVING;
+            nh.loginfo("STATE 'WAITING': Change to STATE 'MOVING'");
+          }
       }
+
       else{
-         nh.logwarn("Commanded Joint angle not valid");
+         nh.logerror("Commanded Joint angle not valid");
       }
     }
+    else{
+      nh.logwarn("Wrong State active");
+    }
+  }
+  else{
+    nh.logwarn("Motor Control not enabled");
+  }
 }
 ros::Subscriber<delta_arduino::cmdAngle> subCmdAngle("delta/set_angle",&moveMotorTo);
 void commandHandler(const std_msgs::String& cmdString){
   String command = cmdString.data;
   if (command.equals("RESET")){
     nh.loginfo("delta/command received: RESET");
-    oldstate_ = state_;
-    state_ = STATE_RESET;
+    if(state_ != STATE_RESET){
+      oldstate_ = state_;
+      state_ = STATE_RESET;
+    }
+    else{
+      nh.logwarn("Already resetting");
+    }
   }
   else if(command.equals("CTRLSTOP")){
     nh.loginfo("delta/command received: CTRLSTOP");
@@ -192,14 +216,14 @@ void commandHandler(const std_msgs::String& cmdString){
      oldstate_ = state_;
      state_ = STATE_INIT;
     }
-    else nh.loginfo("Motor Control already enabled");
+    else nh.logwarn("Motor Control already enabled");
   }
   else{
     nh.logerror("delta/command not valid!");
   }
 }
-
 ros::Subscriber<std_msgs::String> subCmdString("delta/command",&commandHandler);
+
 void stateLoop()
 {
     switch(state_)
@@ -222,7 +246,12 @@ void stateLoop()
       {
           if (oldstate_ != state_){
             nh.loginfo("STATE 'RESET': Drive Motors to endstops");
-            setResetPos();
+            a_stepper.move(130*stepsCircle/360);
+            b_stepper.move(130*stepsCircle/360);
+            c_stepper.move(130*stepsCircle/360);
+            //a_stepper.setSpeed(stepsCircle/4);
+            //b_stepper.setSpeed(stepsCircle/4);
+            //c_stepper.setSpeed(stepsCircle/4);
             oldstate_ = state_;
           }
           if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
@@ -238,21 +267,40 @@ void stateLoop()
                 c_stepper.moveTo(-11*stepsCircle/360);
             }
             else{
-
-              a_stepper.setCurrentPosition(0);
-              b_stepper.setCurrentPosition(0);
-              c_stepper.setCurrentPosition(0);
-              set_reset = false;
-              state_ = STATE_WAITING;
-              nh.loginfo("STATE 'RESET': Change to STATE 'WAITING'");
-            }
+                a_stepper.setCurrentPosition(0);
+                b_stepper.setCurrentPosition(0);
+                c_stepper.setCurrentPosition(0);
+                set_reset = false;
+                state_ = STATE_WAITING;
+                nh.loginfo("STATE 'RESET': Change to STATE 'WAITING'");
+              }
           }
           break;
-      }
-      case STATE_WAITING:
-      {
-          break;
-      }
+        }
+        case STATE_WAITING:
+         {
+            if (oldstate_ != state_){
+              nh.loginfo("STATE 'WAITING': Waiting for new goal");
+              oldstate_ = state_;
+            }
+              break;
+        }
+        case STATE_MOVING:
+        {
+            if (oldstate_ != state_){
+              char output[32];
+              char msg[128] = "STATE 'MOVING': Move motors to: ";
+              printAngles(output);
+              strcat(msg,output);
+              nh.loginfo(msg);
+              oldstate_ = state_;
+            }
+            if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
+              nh.loginfo("STATE 'MOVING': Goal reached");
+              state_ = STATE_WAITING;
+            }
+            break;
+        }
     }
 }
 
@@ -260,9 +308,9 @@ void setup() {
 
   pinMode(LED_PIN, OUTPUT);
   //ROS functions
-  nh.getHardware()->setBaud(115200);
+  nh.getHardware()->setBaud(57600);
   nh.initNode();
-  nh.advertise(JointState);
+  //nh.advertise(JointState);
   nh.subscribe(subCmdAngle);
   nh.subscribe(subCmdString);
 
@@ -294,24 +342,35 @@ void setup() {
 void loop() {
 
 
-
+  nh.spinOnce();
   stateLoop();
   checkEndstops();
   if(enable){
-    a_stepper.run();
-    b_stepper.run();
-    c_stepper.run();
+    if(checkWorkspace()){
+      a_stepper.run();
+      b_stepper.run();
+      c_stepper.run();
+      sendWSMsg = true;
+    }
+     else if(sendWSMsg){
+      char output[32];
+      char msg[128] = "Commanded position not valid: ";
+      printAngles(output);
+      strcat(msg,output);
+      nh.logerror(msg);
+      sendWSMsg = false;
+      }
   }
 
-  if(true){
+  /*if(true){
 
-    /*joint_state.position[0] = a_stepper.currentPosition() / stepsCircle*360;
+    joint_state.position[0] = a_stepper.currentPosition() / stepsCircle*360;
     joint_state.position[1] = b_stepper.currentPosition() / stepsCircle*360;
     joint_state.position[2] = c_stepper.currentPosition() / stepsCircle*360;
     joint_state.velocity[0] = a_stepper.speed() / stepsCircle*360;
     joint_state.velocity[1] = b_stepper.speed() / stepsCircle*360;
     joint_state.velocity[2] = c_stepper.speed() / stepsCircle*360;
-    joint_state.header.stamp = nh.now();*/
+    joint_state.header.stamp = nh.now();
 
     joint_state.position[0] = 0;
     joint_state.position[1] = 0;
@@ -324,9 +383,6 @@ void loop() {
 
     loop_iteration=0;
     JointState.publish(&joint_state);
-  }
-  nh.spinOnce();
-  loop_iteration++;
-  delay(100);
+  }*/
 
 }

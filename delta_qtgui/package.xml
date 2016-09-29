@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <package>
-  <name>delta_controlgui</name>
+  <name>delta_qtgui</name>
   <version>0.1.0</version>
   <description>
 
-     delta_controlgui
+     delta_qtgui
 
   </description>
   <maintainer email="Marvin@gmail.com">Marvin</maintainer>

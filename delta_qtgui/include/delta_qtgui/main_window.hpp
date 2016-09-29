@@ -1,12 +1,12 @@
 /**
- * @file /include/delta_controlgui/main_window.hpp
+ * @file /include/delta_qtgui/main_window.hpp
  *
- * @brief Qt based gui for delta_controlgui.
+ * @brief Qt based gui for delta_qtgui.
  *
  * @date November 2010
  **/
-#ifndef delta_controlgui_MAIN_WINDOW_H
-#define delta_controlgui_MAIN_WINDOW_H
+#ifndef delta_qtgui_MAIN_WINDOW_H
+#define delta_qtgui_MAIN_WINDOW_H
 
 /*****************************************************************************
 ** Includes
@@ -20,7 +20,7 @@
 ** Namespace
 *****************************************************************************/
 
-namespace delta_controlgui {
+namespace delta_qtgui {
 
 /*****************************************************************************
 ** Interface [MainWindow]
@@ -46,19 +46,24 @@ public Q_SLOTS:
 	** Auto-connections (connectSlotsByName())
 	*******************************************/
 	void on_actionAbout_triggered();
-	void on_button_connect_clicked(bool check );
-	void on_checkbox_use_environment_stateChanged(int state);
+
+  void on_resetButton_clicked();
+
+  void on_disableButton_clicked();
+
+  void on_enableButton_clicked();
 
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
 
+
 private:
 	Ui::MainWindowDesign ui;
 	QNode qnode;
 };
 
-}  // namespace delta_controlgui
+}  // namespace delta_qtgui
 
-#endif // delta_controlgui_MAIN_WINDOW_H
+#endif // delta_qtgui_MAIN_WINDOW_H

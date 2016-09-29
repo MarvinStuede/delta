@@ -1,5 +1,5 @@
 /**
- * @file /include/delta_controlgui/qnode.hpp
+ * @file /include/delta_qtgui/qnode.hpp
  *
  * @brief Communications central!
  *
@@ -9,8 +9,8 @@
 ** Ifdefs
 *****************************************************************************/
 
-#ifndef delta_controlgui_QNODE_HPP_
-#define delta_controlgui_QNODE_HPP_
+#ifndef delta_qtgui_QNODE_HPP_
+#define delta_qtgui_QNODE_HPP_
 
 /*****************************************************************************
 ** Includes
@@ -27,7 +27,7 @@
 ** Namespaces
 *****************************************************************************/
 
-namespace delta_controlgui {
+namespace delta_qtgui {
 
 /*****************************************************************************
 ** Class
@@ -41,6 +41,7 @@ public:
 	bool init();
 	bool init(const std::string &master_url, const std::string &host_url);
 	void run();
+  void sendDeltaCmd(std::string cmd);
 
 	/*********************
 	** Logging
@@ -64,9 +65,10 @@ private:
 	int init_argc;
 	char** init_argv;
 	ros::Publisher chatter_publisher;
+  ros::Publisher cmdDelta;
     QStringListModel logging_model;
 };
 
-}  // namespace delta_controlgui
+}  // namespace delta_qtgui
 
-#endif /* delta_controlgui_QNODE_HPP_ */
+#endif /* delta_qtgui_QNODE_HPP_ */

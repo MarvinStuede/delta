@@ -301,7 +301,7 @@ void stateLoop()
               nh.loginfo("STATE 'WAITING': Waiting for new goal");
               oldstate_ = state_;
             }
-             publishJointState(1);
+             //publishJointState(1);
 
              break;
         }
@@ -316,7 +316,7 @@ void stateLoop()
               oldstate_ = state_;
             }
 
-            publishJointState(20.0);
+           // publishJointState(20.0);
 
             if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
               nh.loginfo("STATE 'MOVING': Goal reached");

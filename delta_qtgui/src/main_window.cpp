@@ -28,8 +28,10 @@ using namespace Qt;
 
 MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 	: QMainWindow(parent)
-	, qnode(argc,argv)
+  , qnode(argc,argv)
+  ,kinematics(32,80,295,100)
 {
+
 	ui.setupUi(this); // Calling this incidentally connects all ui's triggers to on_...() callbacks in this class.
     QObject::connect(ui.actionAbout_Qt, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt())); // qApp is a global variable for the application
 
@@ -50,6 +52,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     if ( !qnode.init() ) {
       showNoMasterMessage();
     }
+    showValues();
 }
 
 MainWindow::~MainWindow() {}
@@ -91,6 +94,7 @@ void MainWindow::on_actionAbout_triggered() {
 void MainWindow::on_disableButton_clicked()
 {
     qnode.sendDeltaCmd("CTRLSTOP");
+
 }
 
 void MainWindow::on_enableButton_clicked()
@@ -131,3 +135,82 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
+
+
+void delta_qtgui::MainWindow::on_Slider_X_sliderMoved(int position)
+{
+
+   showValues();
+   if(ui.checkContSend->isChecked()) angleGetAndSend();
+
+}
+void delta_qtgui::MainWindow::on_Slider_Y_sliderMoved(int position)
+{
+
+    showValues();
+    if(ui.checkContSend->isChecked()) angleGetAndSend();
+
+
+}
+void delta_qtgui::MainWindow::on_Slider_Z_sliderMoved(int position)
+{
+
+   showValues();
+   if(ui.checkContSend->isChecked()) angleGetAndSend();
+}
+
+void delta_qtgui::MainWindow::showValues(){
+  float t1,t2,t3;
+  float x,y,z;
+  x = (float)ui.Slider_X->value() / 10;
+  y = (float)ui.Slider_Y->value() / 10;
+  z = (float)ui.Slider_Z->value() / 10;
+   std::string s;
+
+  bool status = kinematics.delta_calcInverse(x,y,z,t1,t2,t3);
+  std::stringstream ss;
+  ss << x;
+  ui.label_X->setText(QString::fromStdString(ss.str()));
+  ss.str(""); ss << y;
+  ui.label_Y->setText(QString::fromStdString(ss.str()));
+  ss.str(""); ss << z;
+  ui.label_Z->setText(QString::fromStdString(ss.str()));
+  ss.precision(2);
+
+  ss.str(""); ss << t1 *180/M_PI << "°";
+  s=ss.str();
+  ui.lineEd_t1->setText(QString::fromUtf8(s.c_str()));
+  ss.str(""); ss << t2*180/M_PI << "°";
+  s=ss.str();
+  ui.lineEd_t2->setText(QString::fromUtf8(s.c_str()));
+  ss.str(""); ss << t3*180/M_PI << "°";
+   s=ss.str();
+  ui.lineEd_t3->setText(QString::fromUtf8(s.c_str()));
+  ss.str(""); ss << status;
+ // std::string s =ss.str();
+  //ROS_INFO(s.c_str());
+}
+
+void delta_qtgui::MainWindow::angleGetAndSend(){
+  float t1,t2,t3;
+  float x,y,z;
+  x = (float)ui.Slider_X->value() / 10;
+  y = (float)ui.Slider_Y->value() / 10;
+  z = (float)ui.Slider_Z->value() / 10;
+  kinematics.delta_calcInverse(x,y,z,t1,t2,t3);
+  t1 = t1 *180/M_PI;
+  t2 = t2 *180/M_PI;
+  t3 = t3 *180/M_PI;
+  qnode.sendDeltaAngle(t1,t2,t3);
+}
+
+void delta_qtgui::MainWindow::on_sendButton_clicked()
+{
+  angleGetAndSend();
+}
+
+void delta_qtgui::MainWindow::on_checkContSend_clicked(bool checked)
+{
+    ui.sendButton->setEnabled(!checked);
+
+}

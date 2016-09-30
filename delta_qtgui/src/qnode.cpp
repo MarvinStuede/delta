@@ -14,6 +14,7 @@
 #include <ros/network.h>
 #include <string>
 #include <std_msgs/String.h>
+#include <cmdAngle.h>
 #include <sstream>
 #include "../include/delta_qtgui/qnode.hpp"
 
@@ -39,6 +40,16 @@ QNode::~QNode() {
     }
 	wait();
 }
+void QNode::rosoutCallback(const rosgraph_msgs::Log::ConstPtr &msg){
+  //log(msg->level,msg->msg);
+int i = (unsigned char)msg->level;
+
+std::stringstream ss;
+ss << msg->msg;
+
+ std::string s =ss.str();
+ROS_INFO(s.c_str());
+}
 
 bool QNode::init() {
 	ros::init(init_argc,init_argv,"delta_qtgui");
@@ -49,7 +60,9 @@ bool QNode::init() {
 	ros::NodeHandle n;
 	// Add your ros communications here.
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
+  cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
 	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+  rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
 	start();
 	return true;
 }
@@ -65,8 +78,10 @@ bool QNode::init(const std::string &master_url, const std::string &host_url) {
 	ros::start(); // explicitly needed since our nodehandle is going out of scope.
 	ros::NodeHandle n;
 	// Add your ros communications here.
-    cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
-	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+  cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
+  cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
+  chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+  rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
 	start();
 	return true;
 }
@@ -79,6 +94,16 @@ void QNode::sendDeltaCmd(std::string cmd){
     msg.data = ss.str();
     cmdDelta.publish(msg);
     log(Info,std::string("I sent: ")+msg.data);
+  }
+}
+void QNode::sendDeltaAngle(float t1, float t2, float t3){
+  if(ros::ok()) {
+    delta_arduino::cmdAngle angles;
+    angles.theta1=t1;
+    angles.theta2=t2;
+    angles.theta3=t3;
+    cmdAngle.publish(angles);
+
   }
 }
 

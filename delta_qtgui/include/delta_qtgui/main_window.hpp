@@ -15,6 +15,7 @@
 #include <QtGui/QMainWindow>
 #include "ui_main_window.h"
 #include "qnode.hpp"
+#include "Kinematics.h"
 
 /*****************************************************************************
 ** Namespace
@@ -40,7 +41,7 @@ public:
 
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
-
+  void angleGetAndSend();
 public Q_SLOTS:
 	/******************************************
 	** Auto-connections (connectSlotsByName())
@@ -52,6 +53,12 @@ public Q_SLOTS:
   void on_disableButton_clicked();
 
   void on_enableButton_clicked();
+  void on_Slider_X_sliderMoved(int position);
+  void on_Slider_Y_sliderMoved(int position);
+  void on_Slider_Z_sliderMoved(int position);
+  void on_sendButton_clicked();
+  void on_checkContSend_clicked(bool checked);
+
 
     /******************************************
     ** Manual connections
@@ -59,11 +66,16 @@ public Q_SLOTS:
     void updateLoggingView(); // no idea why this can't connect automatically
 
 
+
+
 private:
 	Ui::MainWindowDesign ui;
+  void showValues();
 	QNode qnode;
+  Kinematics kinematics;
 };
 
 }  // namespace delta_qtgui
+
 
 #endif // delta_qtgui_MAIN_WINDOW_H

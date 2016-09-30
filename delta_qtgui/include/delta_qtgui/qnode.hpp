@@ -21,6 +21,7 @@
 #include <string>
 #include <QThread>
 #include <QStringListModel>
+#include <rosgraph_msgs/Log.h>
 
 
 /*****************************************************************************
@@ -42,7 +43,8 @@ public:
 	bool init(const std::string &master_url, const std::string &host_url);
 	void run();
   void sendDeltaCmd(std::string cmd);
-
+  void sendDeltaAngle(float t1, float t2, float t3);
+  void rosoutCallback(const rosgraph_msgs::Log::ConstPtr &msg);
 	/*********************
 	** Logging
 	**********************/
@@ -66,6 +68,8 @@ private:
 	char** init_argv;
 	ros::Publisher chatter_publisher;
   ros::Publisher cmdDelta;
+  ros::Publisher cmdAngle;
+  ros::Subscriber rosout;
     QStringListModel logging_model;
 };
 

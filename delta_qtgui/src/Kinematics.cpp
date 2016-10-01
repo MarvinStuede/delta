@@ -20,7 +20,7 @@ Kinematics::Kinematics(float e_radius, float f_radius, float forearm, float bice
    rf = biceps;
 }
 int Kinematics::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0) {
-  //Direkte Kinematik (nicht auf Funktionalit?t ?berpr?ft)
+  //Direkte Kinematik (nicht auf Funktionalitaet ueberprueft)
      float t = (f-e)*tan30/2;
      float dtr = pi/(float)180.0;
 
@@ -77,7 +77,7 @@ int Kinematics::delta_calcAngleYZ(float x0, float y0, float z0, float &theta) {
   float b = 2 * rf*(y0 + f - e);
   float c = z0*z0 + rf*rf + x0*x0 + (y0 + f - e)*(y0 + f - e) - re*re;
 
-  //Fallunterscheidungen (F?lle nach Formelsammlung "Industrieroboter in der Montagetechnik" von Prof. Raatz
+  //Fallunterscheidungen (Faelle nach Formelsammlung "Industrieroboter in der Montagetechnik" von Prof. Raatz
   //Fall 4; a*sin(theta)-b*cos(theta)=c mit a!=0, b!=0, c!=0
   if (a != 0 && b != 0 && c != 0) {
     if (c*c < (a*a + b*b)) {
@@ -141,7 +141,7 @@ int Kinematics::delta_calcAngleYZ(float x0, float y0, float z0, float &theta) {
 }
 int Kinematics::delta_calcParallelAngle(float x0, float y0, float z0, float theta1, float theta2, float theta3, float &phi1, float &phi2, float &phi3) {
   //Berechnung der Winkel innerhalb der Parallelogramme der Unterarme des Roboters
-  //Erfolgt ?ber |u x v|=|u|*|v|*sin(theta) mit u: Vektor der den Unterarm beschreibt, v: Vektor der senkrecht auf a steht und aus Oberarm raus zeigt (L?nge 1)
+  //Erfolgt ueber |u x v|=|u|*|v|*sin(theta) mit u: Vektor der den Unterarm beschreibt, v: Vektor der senkrecht auf a steht und aus Oberarm raus zeigt (Laenge 1)
   int status = delta_calcAngleU1U2(x0, y0, z0, theta1, phi1, 0);
   if (status == 0) status = delta_calcAngleU1U2(x0, y0, z0, theta2, phi2, 2 * M_PI / 3);  // rotate coords to +120 deg
   if (status == 0) status = delta_calcAngleU1U2(x0, y0, z0, theta3, phi3, -2 * M_PI / 3);   // rotate coords to -120 deg

@@ -81,39 +81,13 @@
       <property name="title">
        <string>Commands</string>
       </property>
-      <widget class="QPushButton" name="enableButton">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>50</y>
-         <width>91</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Enable</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="disableButton">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>80</y>
-         <width>91</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Disable</string>
-       </property>
-      </widget>
       <widget class="QPushButton" name="resetButton">
        <property name="geometry">
         <rect>
          <x>30</x>
-         <y>110</y>
-         <width>91</width>
-         <height>22</height>
+         <y>100</y>
+         <width>81</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
@@ -228,10 +202,10 @@
              </sizepolicy>
             </property>
             <property name="minimum">
-             <number>-500</number>
+             <number>-1000</number>
             </property>
             <property name="maximum">
-             <number>500</number>
+             <number>1000</number>
             </property>
             <property name="singleStep">
              <number>1</number>
@@ -250,10 +224,10 @@
              </sizepolicy>
             </property>
             <property name="minimum">
-             <number>-500</number>
+             <number>-1000</number>
             </property>
             <property name="maximum">
-             <number>500</number>
+             <number>1000</number>
             </property>
             <property name="singleStep">
              <number>2</number>
@@ -275,16 +249,16 @@
              </sizepolicy>
             </property>
             <property name="minimum">
-             <number>-3500</number>
+             <number>-3900</number>
             </property>
             <property name="maximum">
-             <number>-2750</number>
+             <number>-2840</number>
             </property>
             <property name="value">
-             <number>-2750</number>
+             <number>-2840</number>
             </property>
             <property name="sliderPosition">
-             <number>-2750</number>
+             <number>-2840</number>
             </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -364,19 +338,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QPushButton" name="getstateButton">
-       <property name="geometry">
-        <rect>
-         <x>170</x>
-         <y>320</y>
-         <width>80</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Get State</string>
-       </property>
-      </widget>
       <widget class="QCheckBox" name="cubicCheck">
        <property name="geometry">
         <rect>
@@ -400,10 +361,13 @@
         </rect>
        </property>
        <property name="minimum">
-        <number>1</number>
+        <number>0</number>
        </property>
        <property name="maximum">
         <number>25</number>
+       </property>
+       <property name="value">
+        <number>0</number>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -418,11 +382,19 @@
          <height>14</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <weight>50</weight>
+         <bold>false</bold>
+         <underline>false</underline>
+         <strikeout>false</strikeout>
+        </font>
+       </property>
        <property name="text">
-        <string>1</string>
+        <string>0</string>
        </property>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>30</x>
@@ -476,20 +448,72 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="layoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>40</y>
+         <width>168</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QPushButton" name="enableButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Enable</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="disableButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Disable</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QLabel" name="label_workspace">
+       <property name="geometry">
+        <rect>
+         <x>300</x>
+         <y>105</y>
+         <width>141</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>11</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>In Workspace</string>
+       </property>
+      </widget>
+      <zorder>layoutWidget</zorder>
+      <zorder>layoutWidget</zorder>
       <zorder>resetButton</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
-      <zorder>enableButton</zorder>
-      <zorder>disableButton</zorder>
-      <zorder>getstateButton</zorder>
       <zorder>cubicCheck</zorder>
-      <zorder>label_4</zorder>
-      <zorder>label_5</zorder>
-      <zorder>stepsizeEd</zorder>
-      <zorder>durEd</zorder>
       <zorder>sliderAngleStep</zorder>
       <zorder>sliderAngleLabel</zorder>
+      <zorder>label_workspace</zorder>
      </widget>
     </item>
    </layout>

@@ -2,7 +2,6 @@
 #define Kinematics_h
 
 #include "math.h"
-//#include "stdafx.h"
 
 class Kinematics
 {

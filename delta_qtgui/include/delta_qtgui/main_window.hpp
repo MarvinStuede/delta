@@ -16,6 +16,7 @@
 #include "ui_main_window.h"
 #include "qnode.hpp"
 #include "Kinematics.h"
+#include "deltaplanner.h"
 
 /*****************************************************************************
 ** Namespace
@@ -42,7 +43,7 @@ public:
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
   void angleGetAndSend();
-  void getCubicAngle(float qs, float qz, float te, float t, float &q, float &qd);
+  void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float te,float stepSize);
 public Q_SLOTS:
 	/******************************************
@@ -60,7 +61,6 @@ public Q_SLOTS:
   void on_Slider_Z_valueChanged(int value);
   void on_sendButton_clicked();
   void on_contsendCheck_clicked(bool checked);
-  void on_getstateButton_clicked();
   void on_cubicCheck_clicked(bool checked);
   void on_sliderAngleStep_valueChanged(int value);
     /******************************************
@@ -68,15 +68,12 @@ public Q_SLOTS:
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
 
-
-
-
-
 private:
 	Ui::MainWindowDesign ui;
   void showValues();
 	QNode qnode;
   Kinematics kinematics;
+  DeltaPlanner deltaplanner;
 };
 
 }  // namespace delta_qtgui

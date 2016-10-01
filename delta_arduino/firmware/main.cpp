@@ -9,8 +9,6 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 
-
-
 #define TRUE                1
 #define FALSE               0
 #define LED_PIN             13
@@ -32,14 +30,9 @@
 #define BASE_RADIUS         80
 #define FOREARM             296.71
 #define STEPMODE            8
+
+//angle to set robot on top of workspace -15.4315 is for z=-285
 #define RESETANGLE          11
-
-
-ros::NodeHandle nh;
-
-sensor_msgs::JointState joint_state;
-
-ros::Publisher JointState("delta/joint_state",&joint_state);
 
 
 
@@ -61,12 +54,17 @@ enum state
 }state_;
 state oldstate_;
 
+ros::NodeHandle nh;
+sensor_msgs::JointState joint_state;
+ros::Publisher JointState("delta/joint_state",&joint_state);
+
 AccelStepper 	a_stepper(AccelStepper::DRIVER, A_STEP_PIN, A_DIR_PIN);
 AccelStepper 	b_stepper(AccelStepper::DRIVER, B_STEP_PIN, B_DIR_PIN);
 AccelStepper 	c_stepper(AccelStepper::DRIVER, C_STEP_PIN, C_DIR_PIN);
 MultiStepper  steppers;
 
 void initialize(AccelStepper *stepper, int enable, int end) {
+
   stepper->setEnablePin(enable);
   stepper->setMinPulseWidth(20);
   stepper->setPinsInverted(false, false, true);
@@ -79,7 +77,6 @@ void initialize(AccelStepper *stepper, int enable, int end) {
 void startCtrl(){
   digitalWrite(LED_PIN, HIGH);
   enable = true;
-
   a_stepper.enableOutputs();
   b_stepper.enableOutputs();
   c_stepper.enableOutputs();
@@ -93,32 +90,10 @@ void stopCtrl(){
   c_stepper.disableOutputs();
   nh.loginfo("Motor Control disabled");
 }
-void printAngles(char *output, bool printTarget){
-  char a_angle_str[10];
-  char b_angle_str[10];
-  char c_angle_str[10];
-  float a_angle;
-  float b_angle;
-  float c_angle;
-  if(printTarget){
-    a_angle = a_stepper.targetPosition()*360/stepsCircle;
-    b_angle = b_stepper.targetPosition()*360/stepsCircle;
-    c_angle = c_stepper.targetPosition()*360/stepsCircle;
-  }
-   else{
-    a_angle = a_stepper.currentPosition()*360/stepsCircle;
-    b_angle = b_stepper.currentPosition()*360/stepsCircle;
-    c_angle = c_stepper.currentPosition()*360/stepsCircle;
-  }
 
-  dtostrf(a_angle, 4, 2, a_angle_str);
-  dtostrf(b_angle, 4, 2, b_angle_str);
-  dtostrf(c_angle, 4, 2, c_angle_str);
-  sprintf(output,"t1: %s t2: %s t3: %s",a_angle_str,b_angle_str,c_angle_str);
-}
 void checkEndstops(){
-  //angle to set robot on top of workspace -15.4315 is for z=-285
-  //float angleForZ=-15.4315;
+  //Funktion stoppt jeweiligen Motor, wenn Endstop erreicht wurde
+  //Falls Resetroutine durchgefuehrt werden soll, fahre Kniehebel in vorgegebene Position
   if (digitalRead(A_END_PIN) == LOW){
     a_stepper.setCurrentPosition(0);
     if (set_reset) a_stepper.moveTo(-RESETANGLE*stepsCircle/360);
@@ -133,7 +108,7 @@ void checkEndstops(){
   }
 }
 bool checkWorkspace(float a_angle, float b_angle, float c_angle ){
-
+//Liefert false zurück, falls einer der Motorwinkel nicht im Intervall [0,-90°] liegen sollte
 if (a_angle >= -90.0 && b_angle >= -90.0 && c_angle >= -90.0){
     if (a_angle <= 0.0 && b_angle <= 0.0 && c_angle <= 0.0){
       return true;
@@ -144,9 +119,10 @@ if (a_angle >= -90.0 && b_angle >= -90.0 && c_angle >= -90.0){
 }
 
 void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
-
+//Subscribercallback um Motoren mit vorgegebener Geschwindigkeit an bestimmte Position zu bewegen
+  //Verschieben in State Machine?
   if(enable){
-    if(state_ = STATE_WAITING){
+    if(state_ == STATE_WAITING || state_ == STATE_MOVING ){
 
       int cmd_theta1 = cmdAngle.theta1 * stepsCircle/360;
       int cmd_theta2 = cmdAngle.theta2 * stepsCircle/360;
@@ -200,6 +176,7 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
 ros::Subscriber<delta_arduino::cmdAngle> subCmdAngle("delta/set_angle",&moveMotorTo);
 
 void commandHandler(const std_msgs::String& cmdString){
+  //Subscriber um Standardkommandos auszführen (durch Service ersetzen??)
   String command = cmdString.data;
   if (command.equals("RESET")){
     nh.loginfo("delta/command received: RESET");
@@ -241,15 +218,12 @@ void srvHandler(const delta_arduino::GetInfo::Request& req, delta_arduino::GetIn
       case STATE_WAITING: res.out="WAITING";  break;
       case STATE_MOVING:  res.out="MOVING";   break;
     }
-    nh.loginfo("Answered Service Call");
   }
   else if (command.equals("GETANGLES")){
     res.theta1=a_stepper.currentPosition()/stepsCircle * 360;
     res.theta2=b_stepper.currentPosition()/stepsCircle * 360;
     res.theta3=c_stepper.currentPosition()/stepsCircle * 360;
     res.out="SENTANGLES";
-    nh.loginfo("Answered Service Call");
-
   }
   else{
     nh.logerror("Service Call unknown");
@@ -261,14 +235,14 @@ ros::ServiceServer<delta_arduino::GetInfo::Request,delta_arduino::GetInfo::Respo
 void publishJointState(float freq){
   //Joint State mit Frequenz in Hz publishen
   //muss oft aufgerufen werden
+
   double d = nh.now().toNsec() - joint_state.header.stamp.toNsec();
   if(d >= 1000000000 / freq){
-    joint_state.position[0] = 234234.652;
-    joint_state.position[1] = 0.4564;
-    joint_state.position[2] = 23.152346;
-   // joint_state.position[0] = (float)a_stepper.currentPosition() / stepsCircle*360;
-   // joint_state.position[1] = (float)b_stepper.currentPosition() / stepsCircle*360;
-   // joint_state.position[2] = (float)c_stepper.currentPosition() / stepsCircle*360;
+
+     //Joint Werte werden falsch dargestellt!
+    joint_state.position[0] = (float)a_stepper.currentPosition() / stepsCircle*360;
+    joint_state.position[1] = (float)b_stepper.currentPosition() / stepsCircle*360;
+    joint_state.position[2] = (float)c_stepper.currentPosition() / stepsCircle*360;
     joint_state.header.stamp = nh.now();
     JointState.publish(&joint_state);
   }
@@ -276,6 +250,7 @@ void publishJointState(float freq){
 
 void stateLoop()
 {
+
     switch(state_)
     {
       case STATE_OFF:
@@ -352,7 +327,6 @@ void stateLoop()
            // publishJointState(20.0);
 
             if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
-              //nh.loginfo("STATE 'MOVING': Goal reached");
               oldstate_ = state_;
               state_ = STATE_WAITING;
             }

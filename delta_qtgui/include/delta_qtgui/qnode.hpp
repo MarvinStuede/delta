@@ -22,7 +22,7 @@
 #include <QThread>
 #include <QStringListModel>
 #include <rosgraph_msgs/Log.h>
-
+#include <delta_arduino/GetInfo.h>
 
 /*****************************************************************************
 ** Namespaces
@@ -43,8 +43,10 @@ public:
 	bool init(const std::string &master_url, const std::string &host_url);
 	void run();
   void sendDeltaCmd(std::string cmd);
-  void sendDeltaAngle(float t1, float t2, float t3);
+  void sendDeltaAngle(float t1, float t2, float t3,float v1, float v2, float v3);
   void rosoutCallback(const rosgraph_msgs::Log::ConstPtr &msg);
+  std::string getDeltaInfo(std::string cmd);
+  void getDeltaAngles(std::string cmd, float &t1, float &t2, float &t3);
 	/*********************
 	** Logging
 	**********************/
@@ -70,6 +72,9 @@ private:
   ros::Publisher cmdDelta;
   ros::Publisher cmdAngle;
   ros::Subscriber rosout;
+  delta_arduino::GetInfo infoSrv;
+  ros::ServiceClient infoClient;
+
     QStringListModel logging_model;
 };
 

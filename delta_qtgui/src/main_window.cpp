@@ -137,26 +137,26 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }  // namespace delta_qtgui
 
 
-void delta_qtgui::MainWindow::on_Slider_X_sliderMoved(int position)
+void delta_qtgui::MainWindow::on_Slider_X_valueChanged(int value)
 {
 
    showValues();
-   if(ui.checkContSend->isChecked()) angleGetAndSend();
+   if(ui.contsendCheck->isChecked()) angleGetAndSend();
 
 }
-void delta_qtgui::MainWindow::on_Slider_Y_sliderMoved(int position)
+void delta_qtgui::MainWindow::on_Slider_Y_valueChanged(int value)
 {
 
     showValues();
-    if(ui.checkContSend->isChecked()) angleGetAndSend();
+    if(ui.contsendCheck->isChecked()) angleGetAndSend();
 
 
 }
-void delta_qtgui::MainWindow::on_Slider_Z_sliderMoved(int position)
+void delta_qtgui::MainWindow::on_Slider_Z_valueChanged(int value)
 {
 
    showValues();
-   if(ui.checkContSend->isChecked()) angleGetAndSend();
+   if(ui.contsendCheck->isChecked()) angleGetAndSend();
 }
 
 void delta_qtgui::MainWindow::showValues(){
@@ -201,16 +201,84 @@ void delta_qtgui::MainWindow::angleGetAndSend(){
   t1 = t1 *180/M_PI;
   t2 = t2 *180/M_PI;
   t3 = t3 *180/M_PI;
-  qnode.sendDeltaAngle(t1,t2,t3);
+  qnode.sendDeltaAngle(t1,t2,t3,90,90,90);
 }
 
 void delta_qtgui::MainWindow::on_sendButton_clicked()
 {
-  angleGetAndSend();
+   if(ui.cubicCheck->isChecked()){
+     float te= ui.durEd->text().toFloat();
+     float stepSize= ui.stepsizeEd->text().toFloat();
+     goCubic(te,stepSize);
+   }
+   else{
+     angleGetAndSend();
+   }
+
 }
 
-void delta_qtgui::MainWindow::on_checkContSend_clicked(bool checked)
+void delta_qtgui::MainWindow::on_contsendCheck_clicked(bool checked)
 {
     ui.sendButton->setEnabled(!checked);
 
+}
+
+void delta_qtgui::MainWindow::on_getstateButton_clicked()
+{
+  std::string state = qnode.getDeltaInfo("GETSTATE");
+}
+void delta_qtgui::MainWindow::goCubic(float te,float stepSize){
+  std::string state = qnode.getDeltaInfo("GETSTATE");
+  if(state.compare("WAITING")==0){
+    float goal_t1,goal_t2,goal_t3;
+    float start_t1,start_t2,start_t3;
+    float t1, t2, t3;
+    float vt1, vt2, vt3;
+    float x,y,z;
+    x = (float)ui.Slider_X->value() / 10;
+    y = (float)ui.Slider_Y->value() / 10;
+    z = (float)ui.Slider_Z->value() / 10;
+    kinematics.delta_calcInverse(x,y,z,goal_t1,goal_t2,goal_t3);
+    goal_t1 = goal_t1 *180/M_PI;
+    goal_t2 = goal_t2 *180/M_PI;
+    goal_t3 = goal_t3 *180/M_PI;
+    qnode.getDeltaAngles("GETANGLES",start_t1,start_t2,start_t3);
+
+    ros::Time endTime = ros::Time::now() + ros::Duration(te);
+    ros::Time startTime = ros::Time::now();
+    ros::Rate rate(1/stepSize);
+    while(ros::ok() && ros::Time::now()<= endTime){
+      ros::Duration tr = ros::Time::now() - startTime;
+      double t = tr.toSec();
+      getCubicAngle(start_t1,goal_t1,te,t,t1,vt1);
+      getCubicAngle(start_t2,goal_t2,te,t,t2,vt2);
+      getCubicAngle(start_t3,goal_t3,te,t,t3,vt3);
+      qnode.sendDeltaAngle(t1,t2,t3,vt1,vt2,vt3);
+      ros::spinOnce();
+      rate.sleep();
+    }
+  }
+}
+
+void delta_qtgui::MainWindow::getCubicAngle(float qs, float qz, float te, float t, float &q, float &qd){
+  q = qs - 3*(qs-qz)/(te * te) * (t*t) + 2*(qs-qz)/(te * te * te) * (t*t*t);
+  qd = -6*(qs-qz)/(te * te) * (t) + 6*(qs-qz)/(te * te * te) * (t*t);
+  float qdd = -6*(qs-qz)/(te * te) + 12*(qs-qz)/(te * te * te) * t;
+  //GEschwindigkeit ist immer mindestens a grad/s beim bremsen
+  float a = (float)ui.sliderAngleStep->value();
+  if(qdd<0 && 0 < qd && qd < a) qd=a;
+  else if(qdd>0 && 0 > qd && qd > -a) qd=-a;
+
+}
+
+
+void delta_qtgui::MainWindow::on_cubicCheck_clicked(bool checked)
+{
+        ui.contsendCheck->setEnabled(!checked);
+}
+
+void delta_qtgui::MainWindow::on_sliderAngleStep_valueChanged(int value)
+{
+
+    ui.sliderAngleLabel->setText(QString::number(ui.sliderAngleStep->value()));
 }

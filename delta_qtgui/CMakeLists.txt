@@ -10,7 +10,14 @@ project(delta_qtgui)
 ##############################################################################
 
 # qt_build provides the qt cmake glue, roscpp the comms for a default talker
-find_package(catkin REQUIRED COMPONENTS qt_build roscpp message_generation)
+find_package(catkin REQUIRED COMPONENTS
+    qt_build
+    roscpp
+    message_generation
+    std_msgs
+    delta_arduino
+    )
+
 include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui)
 # Use this to define what the package will export (e.g. libs, headers).
 # Since the default here is to produce only a binary, we don't worry about
@@ -19,6 +26,8 @@ include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui)
 catkin_package(CATKIN_DEPENDS message_runtime)
 
 add_message_files(FILES cmdAngle.msg)
+add_service_files(FILES GetInfo.srv)
+
 ##############################################################################
 # Qt Environment
 ##############################################################################
@@ -51,7 +60,9 @@ file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINK
 ##############################################################################
 
 add_executable(delta_qtgui ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${QT_MOC_HPP})
+add_dependencies(delta_qtgui ${delta_arduino_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_library(kin include/delta_qtgui/Kinematics.cpp)
 target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} kin)
+
 install(TARGETS delta_qtgui RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

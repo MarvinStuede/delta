@@ -42,6 +42,8 @@ public:
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
   void angleGetAndSend();
+  void getCubicAngle(float qs, float qz, float te, float t, float &q, float &qd);
+  void goCubic(float te,float stepSize);
 public Q_SLOTS:
 	/******************************************
 	** Auto-connections (connectSlotsByName())
@@ -53,17 +55,19 @@ public Q_SLOTS:
   void on_disableButton_clicked();
 
   void on_enableButton_clicked();
-  void on_Slider_X_sliderMoved(int position);
-  void on_Slider_Y_sliderMoved(int position);
-  void on_Slider_Z_sliderMoved(int position);
+  void on_Slider_X_valueChanged(int value);
+  void on_Slider_Y_valueChanged(int value);
+  void on_Slider_Z_valueChanged(int value);
   void on_sendButton_clicked();
-  void on_checkContSend_clicked(bool checked);
-
-
+  void on_contsendCheck_clicked(bool checked);
+  void on_getstateButton_clicked();
+  void on_cubicCheck_clicked(bool checked);
+  void on_sliderAngleStep_valueChanged(int value);
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
+
 
 
 

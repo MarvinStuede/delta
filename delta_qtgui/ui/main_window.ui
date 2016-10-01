@@ -120,7 +120,7 @@
         <string>Reset</string>
        </property>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>30</x>
@@ -182,7 +182,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>30</x>
@@ -275,7 +275,7 @@
              </sizepolicy>
             </property>
             <property name="minimum">
-             <number>-3000</number>
+             <number>-3500</number>
             </property>
             <property name="maximum">
              <number>-2750</number>
@@ -332,7 +332,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>170</x>
@@ -350,7 +350,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkContSend">
+         <widget class="QCheckBox" name="contsendCheck">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -358,32 +358,138 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Continiuous Sending</string>
+           <string>Continuous Sending</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
+      <widget class="QPushButton" name="getstateButton">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>320</y>
+         <width>80</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Get State</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="cubicCheck">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>380</y>
+         <width>141</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Cubic Interpolation</string>
+       </property>
+      </widget>
+      <widget class="QSlider" name="sliderAngleStep">
+       <property name="geometry">
+        <rect>
+         <x>80</x>
+         <y>550</y>
+         <width>160</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>25</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLabel" name="sliderAngleLabel">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>520</y>
+         <width>59</width>
+         <height>14</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>1</string>
+       </property>
+      </widget>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>400</y>
+         <width>131</width>
+         <height>54</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <item>
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Step Size</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Duration</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <item>
+           <widget class="QLineEdit" name="stepsizeEd">
+            <property name="text">
+             <string>0.008</string>
+            </property>
+            <property name="readOnly">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="durEd">
+            <property name="text">
+             <string>0.8</string>
+            </property>
+            <property name="readOnly">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <zorder>resetButton</zorder>
+      <zorder>layoutWidget</zorder>
+      <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>enableButton</zorder>
       <zorder>disableButton</zorder>
-      <zorder>resetButton</zorder>
-      <zorder>label_X</zorder>
-      <zorder>label_Y</zorder>
-      <zorder>label_Z</zorder>
-      <zorder>sendButton</zorder>
-      <zorder>checkContSend</zorder>
-      <zorder></zorder>
-      <zorder></zorder>
-      <zorder></zorder>
-      <zorder>labeld_Z</zorder>
-      <zorder>labeld_X</zorder>
-      <zorder>labeld_Y</zorder>
-      <zorder></zorder>
-      <zorder></zorder>
-      <zorder>label_Z</zorder>
-      <zorder>label_Y</zorder>
-      <zorder>label_X</zorder>
+      <zorder>getstateButton</zorder>
+      <zorder>cubicCheck</zorder>
+      <zorder>label_4</zorder>
+      <zorder>label_5</zorder>
+      <zorder>stepsizeEd</zorder>
+      <zorder>durEd</zorder>
+      <zorder>sliderAngleStep</zorder>
+      <zorder>sliderAngleLabel</zorder>
      </widget>
     </item>
    </layout>

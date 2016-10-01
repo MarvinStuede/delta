@@ -1,5 +1,6 @@
 #include <ros.h>
 #include <delta_arduino/cmdAngle.h>
+#include <delta_arduino/GetInfo.h>
 #include <ros/time.h>
 #include <ros/duration.h>
 #include <sensor_msgs/JointState.h>
@@ -41,16 +42,13 @@ sensor_msgs::JointState joint_state;
 ros::Publisher JointState("delta/joint_state",&joint_state);
 
 
+
 static float stepsCircle = 400 * STEPMODE;
-float x0,y0,z0;
-bool a_set_reset = false, b_set_reset = false, c_set_reset = false;
 bool set_reset = false;
 bool enable = false;
-int write_freq=0;
-float factor =0.2;
-int loop_iteration = 0;
-int sendRate = 5;
-bool sendWSMsg = true;
+float factor =0.28;
+double lastTime;
+double stepTime;
 
 enum state
 {
@@ -72,7 +70,7 @@ void initialize(AccelStepper *stepper, int enable, int end) {
   stepper->setEnablePin(enable);
   stepper->setMinPulseWidth(20);
   stepper->setPinsInverted(false, false, true);
-  stepper->setMaxSpeed(stepsCircle*factor);
+  stepper->setMaxSpeed(stepsCircle/3);
   stepper->setSpeed(stepsCircle*factor*0.9);
   stepper->setAcceleration(20000);
   steppers.addStepper(*stepper);
@@ -153,11 +151,13 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
       int cmd_theta1 = cmdAngle.theta1 * stepsCircle/360;
       int cmd_theta2 = cmdAngle.theta2 * stepsCircle/360;
       int cmd_theta3 = cmdAngle.theta3 * stepsCircle/360;
-
-      long positions[3];
+      int cmd_v1 = cmdAngle.vtheta1 * stepsCircle/360;
+      int cmd_v2 = cmdAngle.vtheta2 * stepsCircle/360;
+      int cmd_v3 = cmdAngle.vtheta3 * stepsCircle/360;
+      /*long positions[3];
       positions[0]=cmd_theta1;
       positions[1]=cmd_theta2;
-      positions[2]=cmd_theta3;
+      positions[2]=cmd_theta3;*/
 
       int act_theta1 = a_stepper.currentPosition();
       int act_theta2 = b_stepper.currentPosition();
@@ -172,13 +172,16 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
           && checkWorkspace(cmdAngle.theta1,cmdAngle.theta2,cmdAngle.theta3)){
 
           if (abs(theta1_diff) >= 1|| abs(theta2_diff) >= 1 || abs(theta3_diff) >= 1){
-            /*a_stepper.move(theta1_diff);
+            a_stepper.move(theta1_diff);
             b_stepper.move(theta2_diff);
-            c_stepper.move(theta3_diff);*/
-            steppers.moveTo(positions);
+            c_stepper.move(theta3_diff);
+            a_stepper.setSpeed(cmd_v1);
+            b_stepper.setSpeed(cmd_v2);
+            c_stepper.setSpeed(cmd_v3);
+           // steppers.moveTo(positions);
             oldstate_ = state_;
             state_ = STATE_MOVING;
-            nh.loginfo("STATE 'WAITING': Change to STATE 'MOVING'");
+            //nh.loginfo("STATE 'WAITING': Change to STATE 'MOVING'");
           }
       }
 
@@ -195,6 +198,7 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
   }
 }
 ros::Subscriber<delta_arduino::cmdAngle> subCmdAngle("delta/set_angle",&moveMotorTo);
+
 void commandHandler(const std_msgs::String& cmdString){
   String command = cmdString.data;
   if (command.equals("RESET")){
@@ -225,6 +229,35 @@ void commandHandler(const std_msgs::String& cmdString){
   }
 }
 ros::Subscriber<std_msgs::String> subCmdString("delta/command",&commandHandler);
+
+void srvHandler(const delta_arduino::GetInfo::Request& req, delta_arduino::GetInfo::Response& res){
+  String command  = req.in;
+  if (command.equals("GETSTATE")){
+    switch(state_)
+    {
+      case STATE_OFF:     res.out="OFF";      break;
+      case STATE_INIT:    res.out="INIT";     break;
+      case STATE_RESET:   res.out="RESET";    break;
+      case STATE_WAITING: res.out="WAITING";  break;
+      case STATE_MOVING:  res.out="MOVING";   break;
+    }
+    nh.loginfo("Answered Service Call");
+  }
+  else if (command.equals("GETANGLES")){
+    res.theta1=a_stepper.currentPosition()/stepsCircle * 360;
+    res.theta2=b_stepper.currentPosition()/stepsCircle * 360;
+    res.theta3=c_stepper.currentPosition()/stepsCircle * 360;
+    res.out="SENTANGLES";
+    nh.loginfo("Answered Service Call");
+
+  }
+  else{
+    nh.logerror("Service Call unknown");
+  }
+}
+
+ros::ServiceServer<delta_arduino::GetInfo::Request,delta_arduino::GetInfo::Response> srvGetInfo("delta/get_info",&srvHandler);
+
 void publishJointState(float freq){
   //Joint State mit Frequenz in Hz publishen
   //muss oft aufgerufen werden
@@ -266,9 +299,9 @@ void stateLoop()
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
-            //a_stepper.setSpeed(stepsCircle/4);
-            //b_stepper.setSpeed(stepsCircle/4);
-            //c_stepper.setSpeed(stepsCircle/4);
+            a_stepper.setSpeed(stepsCircle/4.5);
+            b_stepper.setSpeed(stepsCircle/4.5);
+            c_stepper.setSpeed(stepsCircle/4.5);
             oldstate_ = state_;
           }
           if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
@@ -298,7 +331,7 @@ void stateLoop()
         case STATE_WAITING:
          {
             if (oldstate_ != state_){
-              nh.loginfo("STATE 'WAITING': Waiting for new goal");
+              //nh.loginfo("STATE 'WAITING': Waiting for new goal");
               oldstate_ = state_;
             }
              //publishJointState(1);
@@ -308,18 +341,18 @@ void stateLoop()
         case STATE_MOVING:
         {
             if (oldstate_ != state_){
-              char output[32];
+              /*char output[32];
               char msg[128] = "STATE 'MOVING': Move motors to: ";
               printAngles(output,true);
               strcat(msg,output);
-              nh.loginfo(msg);
+              nh.loginfo(msg);*/
               oldstate_ = state_;
             }
 
            // publishJointState(20.0);
 
             if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
-              nh.loginfo("STATE 'MOVING': Goal reached");
+              //nh.loginfo("STATE 'MOVING': Goal reached");
               oldstate_ = state_;
               state_ = STATE_WAITING;
             }
@@ -337,7 +370,7 @@ void setup() {
   nh.advertise(JointState);
   nh.subscribe(subCmdAngle);
   nh.subscribe(subCmdString);
-
+  nh.advertiseService(srvGetInfo);
 
 
   joint_state.name_length =  3;
@@ -372,14 +405,9 @@ void loop() {
   stateLoop();
   checkEndstops();
   if(enable){
-      if (state_ == STATE_MOVING){
-         steppers.runSpeedToPosition();
-      }
-      else{
-        a_stepper.runSpeedToPosition();
-        b_stepper.runSpeedToPosition();
-        c_stepper.runSpeedToPosition();
-      }
-  }
+     a_stepper.runSpeedToPosition();
+     b_stepper.runSpeedToPosition();
+     c_stepper.runSpeedToPosition();
 
+  }
 }

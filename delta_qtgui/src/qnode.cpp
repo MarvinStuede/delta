@@ -14,7 +14,7 @@
 #include <ros/network.h>
 #include <string>
 #include <std_msgs/String.h>
-#include <cmdAngle.h>
+#include <delta_arduino/cmdAngle.h>
 #include <sstream>
 #include "../include/delta_qtgui/qnode.hpp"
 
@@ -62,7 +62,9 @@ bool QNode::init() {
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
 	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
-  rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
+ // rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
+  infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
+
 	start();
 	return true;
 }
@@ -81,7 +83,8 @@ bool QNode::init(const std::string &master_url, const std::string &host_url) {
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
   chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
-  rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
+   infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
+  //rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
 	start();
 	return true;
 }
@@ -96,12 +99,31 @@ void QNode::sendDeltaCmd(std::string cmd){
     log(Info,std::string("I sent: ")+msg.data);
   }
 }
-void QNode::sendDeltaAngle(float t1, float t2, float t3){
+std::string QNode::getDeltaInfo(std::string cmd){
+    infoSrv.request.in=cmd;
+    infoClient.call(infoSrv);
+
+    log(Info,std::string("Received from Info Call: ")+infoSrv.response.out);
+    return infoSrv.response.out;
+}
+void QNode::getDeltaAngles(std::string cmd, float &t1, float &t2, float &t3){
+  infoSrv.request.in=cmd;
+  infoClient.call(infoSrv);
+  t1=infoSrv.response.theta1;
+  t2=infoSrv.response.theta2;
+  t3=infoSrv.response.theta3;
+
+}
+
+void QNode::sendDeltaAngle(float t1, float t2, float t3, float v1, float v2, float v3){
   if(ros::ok()) {
     delta_arduino::cmdAngle angles;
     angles.theta1=t1;
     angles.theta2=t2;
     angles.theta3=t3;
+    angles.vtheta1=v1;
+    angles.vtheta2=v2;
+    angles.vtheta3=v3;
     cmdAngle.publish(angles);
 
   }

@@ -9,8 +9,13 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 add_message_files(
- FILES
-  cmdAngle.msg
+ DIRECTORY msg
+ FILES cmdAngle.msg
+
+)
+add_service_files(
+ DIRECTORY srv
+ FILES GetInfo.srv
 
 )
 generate_messages(
@@ -19,7 +24,7 @@ generate_messages(
 )
 
 catkin_package(
-CATKIN_DEPENDS message_runtime
+CATKIN_DEPENDS message_runtime std_msgs
 )
 
 

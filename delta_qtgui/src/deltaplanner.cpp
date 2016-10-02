@@ -1,5 +1,6 @@
 #include "deltaplanner.h"
 #include <ros/ros.h>
+#include <ros/package.h>
 
 DeltaPlanner::DeltaPlanner()
 {
@@ -27,22 +28,35 @@ int DeltaPlanner::readWorkSpace() {
   char *record, *line;
   char path[100];
   char pathno[10];
+  std::stringstream ss;
+  std::stringstream pathstream;
+  std::string s;
 
   for (int j = 0; j < Z_ROWS; j++) {
     int i = 0;
-    snprintf(path,100,"/home/marvin/catkin_ws/src/delta/delta_qtgui/resources/WorkspaceData/");
-    snprintf(pathno, 10, "%d", (j - 390));
-    strcat(path, pathno);
-    strcat(path, ".csv");
 
+    std::string path_str = ros::package::getPath("delta_qtgui");
+    if(path_str.compare("")==0){
+
+      ss << "Path to delta_qtgui not found";
+
+      s = ss.str();
+      ROS_INFO(s.c_str());
+
+      return -1;
+    }
+    pathstream.str("");
+    pathstream << path_str<<"/resources/WorkspaceData/"<<(j - 390)<<".csv";
+
+    snprintf(path,100,(pathstream.str()).c_str());
     FILE *fstream = fopen(path, "r");
 
     if (fstream == NULL)
     {
-      std::stringstream ss;
+      ss.str("");
       ss << "Opening of file " << path << " failed";
 
-      std::string s =ss.str();
+      s =ss.str();
       ROS_INFO(s.c_str());
 
       return -1;
@@ -118,18 +132,15 @@ int DeltaPlanner::giveBoundedPoint(float &x_prop, float &y_prop, float &z_prop) 
   bool arrayEndFound = false;
   //round z value and transform to array index
   int zInArray = (int)round(z_prop) - Z_MIN;
-  std::stringstream ss;
-  ss << zInArray;
 
-  std::string s =ss.str();
-  ROS_INFO(s.c_str());
+
   int countRows = 0;
   while (arrayEndFound == false) {
     if (Workspace[zInArray][countRows][0] == 9999) arrayEndFound = true;
     else countRows++;
 
   }
-  countRows--;
+
   if (countRows > 0) {
     //Create helper array, which only contains the necessary xy-pane
     float *testArrayX;

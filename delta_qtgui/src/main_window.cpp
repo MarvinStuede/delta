@@ -135,17 +135,22 @@ void MainWindow::showValues(){
   z = (float)ui.Slider_Z->value() / 10;
 
 
-
-  if(deltaplanner.giveBoundedPoint(x,y,z)==1){
+  int boundReturn = deltaplanner.giveBoundedPoint(x,y,z);
+  if(boundReturn==1){
      ui.label_workspace->setText("In Workspace");
      ui.label_workspace->setStyleSheet("QLabel {color : green}");
   }
-  else{
-    ui.label_workspace->setText("Out of Workspace");
+  else if(boundReturn==2){
+    ui.label_workspace->setText("At Workspace boundary");
+    ui.label_workspace->setStyleSheet("QLabel {color : #fca016}");// orange
     ui.Slider_X->setValue((int)x*10);
     ui.Slider_Y->setValue((int)y*10);
     ui.Slider_Z->setValue((int)z*10);
-    ui.label_workspace->setStyleSheet("QLabel {color : red}");
+
+  }
+  else{
+    ui.label_workspace->setText("Error: Out of Workspace");
+    ui.label_workspace->setStyleSheet("color: red}");
   }
 
   std::string s;
@@ -157,7 +162,7 @@ void MainWindow::showValues(){
   ui.label_Y->setText(QString::fromStdString(ss.str()));
   ss.str(""); ss << z;
   ui.label_Z->setText(QString::fromStdString(ss.str()));
-  ss.precision(2);
+  ss.precision(4);
 
   ss.str(""); ss << t1 *180/M_PI << "°";
   s=ss.str();

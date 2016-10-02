@@ -21,8 +21,10 @@
   <build_depend>libqt4-dev</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>std_msgs</build_depend>
+   <build_depend>roslib</build_depend>
   <run_depend>message_runtime</run_depend>
   <run_depend>delta_arduino</run_depend>
+  <run_depend>roslib</run_depend>
   <run_depend>qt_build</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>libqt4-dev</run_depend>

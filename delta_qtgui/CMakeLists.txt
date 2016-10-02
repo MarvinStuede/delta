@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
     std_msgs
     delta_arduino
+    roslib
     )
 
 include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui)
@@ -23,7 +24,7 @@ include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui)
 # Since the default here is to produce only a binary, we don't worry about
 # exporting anything. 
 
-catkin_package(CATKIN_DEPENDS message_runtime)
+catkin_package(CATKIN_DEPENDS message_runtime roscpp roslib)
 
 add_message_files(FILES cmdAngle.msg)
 add_service_files(FILES GetInfo.srv)

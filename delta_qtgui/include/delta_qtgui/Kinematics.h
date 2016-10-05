@@ -10,6 +10,7 @@ class Kinematics
 		int delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0);
 		int delta_calcInverse(float x0, float y0, float z0, float &theta1, float &theta2, float &theta3);
 		int delta_calcParallelAngle(float x0, float y0, float z0, float theta1, float theta2, float theta3, float &phi1, float &phi2, float &phi3);
+    int delta_Jacobian(float* phi, float* psi, float* theta,float* Jac[]);
 	private:
 		int delta_calcAngleYZ(float x0, float y0, float z0, float &theta);
 		int delta_calcAngleU1U2(float x0, float y0, float z0, float theta, float &phi, float rot);

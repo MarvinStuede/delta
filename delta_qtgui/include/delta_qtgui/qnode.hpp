@@ -22,6 +22,7 @@
 #include <QThread>
 #include <QStringListModel>
 #include <rosgraph_msgs/Log.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <delta_arduino/GetInfo.h>
 
 /*****************************************************************************
@@ -47,6 +48,7 @@ public:
   void rosoutCallback(const rosgraph_msgs::Log::ConstPtr &msg);
   std::string getDeltaInfo(std::string cmd);
   void getDeltaAngles(std::string cmd, float &t1, float &t2, float &t3);
+  void sendDeltaKartPos(float x, float y, float z);
 	/*********************
 	** Logging
 	**********************/
@@ -71,6 +73,7 @@ private:
 	ros::Publisher chatter_publisher;
   ros::Publisher cmdDelta;
   ros::Publisher cmdAngle;
+  ros::Publisher cmdKart;
   ros::Subscriber rosout;
   delta_arduino::GetInfo infoSrv;
   ros::ServiceClient infoClient;

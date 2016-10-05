@@ -22,7 +22,7 @@ Kinematics::Kinematics(float e_radius, float f_radius, float forearm, float bice
 int Kinematics::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0) {
   //Direkte Kinematik (nicht auf Funktionalitaet ueberprueft)
      float t = (f-e)*tan30/2;
-     float dtr = pi/(float)180.0;
+     float dtr = -pi/(float)180.0;
 
      theta1 *= dtr;
      theta2 *= dtr;
@@ -148,6 +148,7 @@ int Kinematics::delta_calcParallelAngle(float x0, float y0, float z0, float thet
   return status;
 
 }
+
 int Kinematics::delta_calcAngleU1U2(float x0, float y0, float z0, float theta, float &phi, float rot) {
   //Hilfsfunktion um Winkel zu berechnen
   float u1 = x0+sin(rot)*(e-f+rf*cos(theta));
@@ -168,5 +169,100 @@ int Kinematics::delta_calcInverse(float x0, float y0, float z0, float &theta1, f
      int status = delta_calcAngleYZ(x0, y0, z0, theta1);
      if (status == 0) status = delta_calcAngleYZ(x0*cos120 + y0*sin120, y0*cos120-x0*sin120, z0, theta2);  // rotate coords to +120 deg
      if (status == 0) status = delta_calcAngleYZ(x0*cos120 - y0*sin120, y0*cos120+x0*sin120, z0, theta3);  // rotate coords to -120 deg
+     if(theta1< -100*M_PI/180 ||theta2< -100*M_PI/180 ||theta3< -100*M_PI/180){
+       int ee=0;
+     }
      return status;
+}
+int Kinematics::delta_Jacobian(float* phi, float* psi, float* theta,float* Jac[]){
+
+      float t1 = cos(psi[2]);
+      float t2 = phi[2] + theta[2];
+      float t3 = cos(t2);
+      float t4 = t1 * t3;
+      float t5 = sin(-2*M_PI/3);
+      float t6 = phi[1] + theta[1];
+      float t7 = sin(t6);
+      float t9 = cos(psi[1]);
+      float t12 = t1 * t9;
+      float t13 = cos(t6);
+      float t14 = sin(2*M_PI/3);
+      float t15 = t13 * t14;
+      float t16 = sin(t2);
+      float t19 = sin(psi[1]);
+      float t21 = cos(2*M_PI/3);
+      float t22 = t21 * t16;
+      float t24 = cos(-2*M_PI/3);
+      float t25 = sin(psi[2]);
+      float t26 = t24 * t25;
+      float t27 = t7 * t9;
+      float t30 = theta[0] + phi[0];
+      float t31 = cos(t30);
+      float t34 = cos(psi[0]);
+      float t35 = sin(0);
+      float t36 = t34 * t35;
+      float t37 = t36 * t27;
+      float t39 = t24 * t34;
+      float t41 = sin(t30);
+      float t42 = t9 * t41;
+      float t43 = t42 * t15;
+      float t47 = cos(0);
+      float t48 = t34 * t47;
+      float t49 = t48 * t27;
+      float t51 = t5 * t34;
+      float t53 = t13 * t21;
+      float t54 = t42 * t53;
+      float t56 = t1 * t31;
+      float t58 = t9 * t13;
+      float t59 = t58 * t22;
+      float t63 = t58 * t14 * t16;
+      float t65 = t4 * t24;
+      float t66 = t34 * t41;
+      float t67 = t19 * t21;
+      float t68 = t66 * t67;
+      float t70 = sin(psi[0]);
+      float t71 = t70 * t47;
+      float t72 = t71 * t27;
+      float t74 = t4 * t5;
+      float t75 = t14 * t19;
+      float t76 = t66 * t75;
+      float t78 = t35 * t70;
+      float t79 = t78 * t27;
+      float t81 = t56 * t34;
+      float t82 = t35 * t14;
+      float t83 = t19 * t16;
+      float t86 = t47 * t19;
+      float t89 = t4 * t24 * t31 * t37 - t4 * t5 * t31 * t49 + t81 * t86 * t22 - t56 * t36 * t59 - t4 * t39 * t43 + t4 * t51 * t54 + t56 * t48 * t63 + t81 * t82 * t83 - t65 * t68 + t65 * t72 - t74 * t76 + t74 * t79;
+      float t90 = t1 * t35;
+      float t91 = t90 * t70;
+      float t93 = t1 * t70;
+      float t94 = t93 * t47;
+      float t98 = t26 * t34;
+      float t100 = t25 * t5;
+      float t103 = t100 * t34;
+      float t121 = t47 * t7 * t9;
+      float t123 = t26 * t35 * t70 * t7 * t9 + t103 * t41 * t19 * t21 - t98 * t41 * t14 * t19 - t100 * t70 * t121 - t100 * t31 * t37 - t91 * t67 * t16 + t94 * t75 * t16 - t26 * t31 * t49 + t103 * t43 + t98 * t54 - t94 * t59 - t91 * t63;
+      float t125 = 1 / (t89 + t123);
+      float t128 = sin(phi[0]);
+      float t129 = l_all(1) * t34 * t128;
+      float t141 = sin(phi[1]);
+      float t142 = l_all(1) * t9 * t141;
+      float t144 = t31 * t34;
+      float t148 = t34 * t9;
+      float t149 = t41 * t13;
+      float t155 = sin(phi[2]);
+      float t156 = l_all(1) * t1 * t155;
+      float t185 = t58 * t14;
+      float t187 = t58 * t21;
+      float t202 = t144 * t35;
+      float t204 = t144 * t47;
+      Jac[0][0] = -(t4 * t5 * t7 * t9 - t1 * t19 * t22 - t12 * t15 * t16 + t26 * t27) * t125 * t129;
+      Jac[0][1] = (-t56 * t36 * t16 - t93 * t47 * t16 + t4 * t51 * t41 + t26 * t66) * t125 * t142;
+      Jac[0][2] = (t144 * t35 * t7 * t9 - t148 * t149 * t14 - t68 + t72) * t125 * t156;
+      Jac[1][0] = (t4 * t24 * t7 * t9 + t1 * t14 * t83 - t12 * t53 * t16 - t100 * t27) * t125 * t129;
+      Jac[1][1] = -(-t56 * t48 * t16 + t90 * t70 * t16 + t4 * t39 * t41 - t100 * t66) * t125 * t142;
+      Jac[1][2] = -(-t148 * t149 * t21 + t144 * t121 + t76 - t79) * t125 * t156;
+      Jac[2][0] = -(t4 * t5 * t14 * t19 + t4 * t24 * t19 * t21 - t100 * t185 - t100 * t67 + t65 * t185 - t26 * t187 - t74 * t187 + t26 * t75) * t125 * t129;
+      Jac[2][1] = (t4 * t24 * t70 * t47 + t4 * t5 * t35 * t70 - t100 * t202 - t100 * t71 + t65 * t202 - t26 * t204 - t74 * t204 + t26 * t78) * t125 * t142;
+      Jac[2][2] = -(-t144 * t82 * t19 - t144 * t86 * t21 - t204 * t185 + t78 * t185 + t202 * t187 + t71 * t187 + t78 * t67 - t71 * t75) * t125 * t156;
 }

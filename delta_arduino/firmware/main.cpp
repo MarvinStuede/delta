@@ -29,7 +29,7 @@
 #define BICEPS              100
 #define BASE_RADIUS         80
 #define FOREARM             296.71
-#define STEPMODE            8
+#define STEPMODE            16
 
 //angle to set robot on top of workspace -15.4315 is for z=-285
 #define RESETANGLE          11

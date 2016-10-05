@@ -1,0 +1,13 @@
+<launch>
+	<node pkg="tf" type="static_transform_publisher" name="delta_base_broadcaster" args="0 0 0 0 0 0 1 map delta_base 10" />
+        <node pkg="tf_broadcaster" type="tf_broadcaster" name="tf_broadcaster" />
+        <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server">
+            <param name="target_frame_name" value="delta_base"/>
+            <param name="source_frame_name" value="delta_ee_platform"/>
+            <param name="trajectory_publish_rate" value="6"/>
+            <param name="trajectory_update_rate" value="6"/>
+        </node>
+   	<node pkg="delta_qtgui" name="delta_qtgui" type="delta_qtgui"/>
+
+
+</launch>

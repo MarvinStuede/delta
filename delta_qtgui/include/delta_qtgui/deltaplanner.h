@@ -17,6 +17,7 @@ public:
    int Workspace[Z_ROWS][XY_LEN][2];
   DeltaPlanner();
   void getCubicAngle(float qs, float qz, float te, float t, float ve, float &q, float &qd);
+  void getCubicCartesian(float te, float t, float* pos_start, float* pos__end, float *q[],float *qd[]);
   int readWorkSpace();
   int pointInPolygon(int nvert, float *vertx, float *verty, float testx, float testy);
   int giveBoundedPoint(float &x_prop, float &y_prop, float &z_prop);

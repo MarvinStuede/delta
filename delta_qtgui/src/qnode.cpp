@@ -61,6 +61,7 @@ bool QNode::init() {
 	// Add your ros communications here.
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
+  cmdKart = n.advertise<geometry_msgs::PoseStamped>("/delta/set_cartesian",1000);
 	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
  // rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
   infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
@@ -82,6 +83,7 @@ bool QNode::init(const std::string &master_url, const std::string &host_url) {
 	// Add your ros communications here.
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
+  cmdKart = n.advertise<geometry_msgs::Pose>("/delta/set_cartesian",1000);
   chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
    infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
   //rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
@@ -128,7 +130,20 @@ void QNode::sendDeltaAngle(float t1, float t2, float t3, float v1, float v2, flo
 
   }
 }
+void QNode::sendDeltaKartPos(float x, float y, float z){
 
+  if(ros::ok()) {
+    geometry_msgs::PoseStamped point;
+    point.pose.position.x = x/1000;
+    point.pose.position.y = y/1000;
+    point.pose.position.z = z/1000;
+    point.header.frame_id ="delta_base";
+    point.header.stamp = ros::Time::now();
+
+    cmdKart.publish(point);
+
+  }
+}
 void QNode::run() {
 	ros::Rate loop_rate(1);
 

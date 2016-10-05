@@ -16,12 +16,11 @@ void DeltaPlanner::getCubicAngle(float qs, float qz, float te, float t, float ve
   qd = 2*a2*t + 3*a3*t*t;
   float qdd = 2*a2 + 6*a3*t;
 
-  //GEschwindigkeit ist immer mindestens a grad/s beim bremsen
-
- // if(qdd<0 && 0 < qd && qd < a) qd=a;
-  //else if(qdd>0 && 0 > qd && qd > -a) qd=-a;
+}
+void DeltaPlanner::getCubicCartesian(float te, float t, float* pos_start, float* pos__end, float *q[],float *qd[]){
 
 }
+
 int DeltaPlanner::readWorkSpace() {
   //Read Workspace values, given in csv files. Each file describes a convex polygon in the xy-pane
   char buffer[32] = { 0 };
@@ -120,6 +119,13 @@ int DeltaPlanner::calcPointOnPolygon(int nvert, float *vertx, float *verty, floa
   //Perpendicular point for testpoint on line between pk1 and pk2
   lpointx = testx - (((testx - pk1_x)*n1+ (testy - pk1_y)*n2) / (n1*n1 + n2*n2))*n1;
   lpointy = testy - (((testx - pk1_x)*n1 + (testy - pk1_y)*n2) / (n1*n1 + n2*n2))*n2;
+  //Check if Perpendicular point lies between pk1 and pk2, if not set point to pk1;
+  float dp = (pk1_x - pk2_x)*(pk1_x - pk2_x) + (pk1_y - pk2_y)*(pk1_y - pk2_y);
+  if (d2 > dp){
+    lpointx=pk1_x;
+    lpointy=pk2_y;
+    return 0;
+   }
   if (isnan(lpointx) || isnan(lpointy)){
 
     return -1;

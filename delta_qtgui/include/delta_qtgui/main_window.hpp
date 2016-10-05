@@ -59,14 +59,21 @@ public Q_SLOTS:
   void on_Slider_X_valueChanged(int value);
   void on_Slider_Y_valueChanged(int value);
   void on_Slider_Z_valueChanged(int value);
+  void on_lineEd_X_returnPressed();
+  void on_lineEd_Y_returnPressed();
+  void on_lineEd_Z_returnPressed();
   void on_sendButton_clicked();
   void on_contsendCheck_clicked(bool checked);
   void on_cubicCheck_clicked(bool checked);
   void on_sliderAngleStep_valueChanged(int value);
+      void on_resetTopButton_clicked();
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
+
+
+
 
 private:
 	Ui::MainWindowDesign ui;

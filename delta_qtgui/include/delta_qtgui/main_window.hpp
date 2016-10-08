@@ -17,6 +17,7 @@
 #include "qnode.hpp"
 #include "Kinematics.h"
 #include "deltaplanner.h"
+#include <vector>
 
 /*****************************************************************************
 ** Namespace
@@ -45,6 +46,7 @@ public:
   void angleGetAndSend();
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float te,float stepSize);
+  void goCubicCart(float te,float stepSize);
 public Q_SLOTS:
 	/******************************************
 	** Auto-connections (connectSlotsByName())

@@ -562,6 +562,19 @@
         </item>
        </layout>
       </widget>
+      <widget class="QCheckBox" name="cartesianCheck">
+       <property name="geometry">
+        <rect>
+         <x>200</x>
+         <y>380</y>
+         <width>101</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Cartesian</string>
+       </property>
+      </widget>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
@@ -572,6 +585,7 @@
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>resetButton</zorder>
+      <zorder>cartesianCheck</zorder>
      </widget>
     </item>
    </layout>

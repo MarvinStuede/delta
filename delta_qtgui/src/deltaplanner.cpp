@@ -2,22 +2,38 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
-DeltaPlanner::DeltaPlanner()
+DeltaPlanner::DeltaPlanner():kinematics(32,80,295,100)
 {
 
 }
-void DeltaPlanner::getCubicAngle(float qs, float qz, float te, float t, float ve, float &q, float &qd){
+void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_start, const std::vector<float> & q_end,std::vector<float> & dq_end,std::vector<float> & q,std::vector<float> & dq){
+  for(int i=0;i<3;i++){
+    if(q_end[i]<q_start[i]) dq_end[i] *= -1;
 
-  if(qz<qs) ve = -ve;
-  float a0 = qs;
-  float a2 = ve/(2*te) - 3*(qs+ (ve * te)/(2) - qz)/(te*te);
-  float a3 = (2*(qs + (ve*te)/(2) - qz))/(te * te *te);
-  q = a0 + a2*t*t + a3*t*t*t;
-  qd = 2*a2*t + 3*a3*t*t;
-  float qdd = 2*a2 + 6*a3*t;
+    float a0 = q_start[i];
+    float a2 = dq_end[i]/(2*te) - 3*(q_start[i]+ (dq_end[i] * te)/(2) - q_end[i])/(te*te);
+    float a3 = (2*(q_start[i] + (dq_end[i]*te)/(2) - q_end[i]))/(te * te *te);
 
+    q[i] = a0 + a2*t*t + a3*t*t*t;
+    dq[i] = 2*a2*t + 3*a3*t*t;
+    //float qdd = 2*a2 + 6*a3*t;
+  }
 }
-void DeltaPlanner::getCubicCartesian(float te, float t, float* pos_start, float* pos__end, float *q[],float *qd[]){
+void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> & pos_start, const std::vector<float> & pos_end, std::vector<float> &x, std::vector<float> &dx, std::vector<float> &q,std::vector<float> &dq){
+  float a0, a2, a3;
+  float ve=0;
+  for (int i=0;i<3;i++){
+    a0 = pos_start[i];
+    a2 = ve/(2*te) - 3*(pos_start[i]+ (ve * te)/(2) - pos_end[i])/(te*te);
+    a3 = (2*(pos_start[i] + (ve*te)/(2) - pos_end[i]))/(te * te *te);
+    x[i] = a0 + a2*t*t + a3*t*t*t;
+    dx[i] = 2*a2*t + 3*a3*t*t;
+  }
+  if(t>te/1.5){
+    int debug=0;
+  }
+  kinematics.delta_calcInverse(x,q);
+  kinematics.delta_calcJointVel(x,dx,q,dq);
 
 }
 

@@ -18,13 +18,14 @@ find_package(catkin REQUIRED COMPONENTS
     delta_arduino
     roslib
     )
+find_package(Eigen3 REQUIRED)
 
-include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui)
+include_directories(${catkin_INCLUDE_DIRS} include/delta_qtgui ${Eigen_INCLUDE_DIRS})
 # Use this to define what the package will export (e.g. libs, headers).
 # Since the default here is to produce only a binary, we don't worry about
 # exporting anything. 
 
-catkin_package(CATKIN_DEPENDS message_runtime roscpp roslib)
+catkin_package(CATKIN_DEPENDS message_runtime roscpp roslib eigen3)
 
 add_message_files(FILES cmdAngle.msg)
 add_service_files(FILES GetInfo.srv)
@@ -64,7 +65,7 @@ add_executable(delta_qtgui ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${Q
 add_dependencies(delta_qtgui ${delta_arduino_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_library(kin src/Kinematics.cpp)
 add_library(dp src/deltaplanner.cpp)
-target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} kin dp)
+target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${Eigen_LIBRARIES} kin dp)
 
 install(TARGETS delta_qtgui RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

@@ -239,10 +239,18 @@ void publishJointState(float freq){
   double d = nh.now().toNsec() - joint_state.header.stamp.toNsec();
   if(d >= 1000000000 / freq){
 
-     //Joint Werte werden falsch dargestellt!
+
+    float dummy1[3];
+    float dummy2[3];
+    joint_state.position=dummy1;
+    joint_state.velocity=dummy2;
+    joint_state.velocity[0] = (float)a_stepper.speed() / stepsCircle*360;
+    joint_state.velocity[1] = (float)b_stepper.speed() / stepsCircle*360;
+    joint_state.velocity[2] = (float)c_stepper.speed() / stepsCircle*360;
     joint_state.position[0] = (float)a_stepper.currentPosition() / stepsCircle*360;
     joint_state.position[1] = (float)b_stepper.currentPosition() / stepsCircle*360;
     joint_state.position[2] = (float)c_stepper.currentPosition() / stepsCircle*360;
+
     joint_state.header.stamp = nh.now();
     JointState.publish(&joint_state);
   }
@@ -309,7 +317,7 @@ void stateLoop()
               //nh.loginfo("STATE 'WAITING': Waiting for new goal");
               oldstate_ = state_;
             }
-             //publishJointState(1);
+             publishJointState(1.0);
 
              break;
         }
@@ -324,7 +332,7 @@ void stateLoop()
               oldstate_ = state_;
             }
 
-           // publishJointState(20.0);
+            publishJointState(4.0);
 
             if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
               oldstate_ = state_;
@@ -349,9 +357,12 @@ void setup() {
 
   joint_state.name_length =  3;
   joint_state.position_length =  3;
-  joint_state.name[0] = (char*)"joint1";
-  joint_state.name[1] = (char*)"joint2";
-  joint_state.name[2] = (char*)"joint3";
+  joint_state.velocity_length =  3;
+  //char* dummy[3];
+  //joint_state.name=dummy;
+  joint_state.name[0] = (char*)"q1";
+  joint_state.name[1] = (char*)"q2";
+  joint_state.name[2] = (char*)"q3";
   joint_state.header.stamp = nh.now();
 
   while (!nh.connected() ){

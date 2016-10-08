@@ -146,14 +146,14 @@ void MainWindow::on_lineEd_Z_returnPressed()
 }
 
 void MainWindow::showValues(){
-  float t1,t2,t3;
-  float x,y,z;
-  x = (float)ui.Slider_X->value() / 10;
-  y = (float)ui.Slider_Y->value() / 10;
-  z = (float)ui.Slider_Z->value() / 10;
+  std::vector<float> q(3,0);
+  std::vector<float> x(3,0);
+  x[0] = (float)ui.Slider_X->value() / 10;
+  x[1] = (float)ui.Slider_Y->value() / 10;
+  x[2] = (float)ui.Slider_Z->value() / 10;
 
 
-  int boundReturn = deltaplanner.giveBoundedPoint(x,y,z);
+  int boundReturn = deltaplanner.giveBoundedPoint(x[0],x[1],x[2]);
   if(boundReturn==1){
      ui.label_workspace->setText("In Workspace");
      ui.label_workspace->setStyleSheet("QLabel {color : green}");
@@ -161,9 +161,9 @@ void MainWindow::showValues(){
   else if(boundReturn==2){
     ui.label_workspace->setText("At Workspace boundary");
     ui.label_workspace->setStyleSheet("QLabel {color : #fca016}");// orange
-    ui.Slider_X->setValue((int)x*10);
-    ui.Slider_Y->setValue((int)y*10);
-    ui.Slider_Z->setValue((int)z*10);
+    ui.Slider_X->setValue((int)x[0]*10);
+    ui.Slider_Y->setValue((int)x[1]*10);
+    ui.Slider_Z->setValue((int)x[2]*10);
 
   }
   else{
@@ -172,23 +172,23 @@ void MainWindow::showValues(){
   }
 
   std::string s;
-  bool status = kinematics.delta_calcInverse(x,y,z,t1,t2,t3);
+  bool status = kinematics.delta_calcInverse(x,q);
   std::stringstream ss;
-  ss << x;
+  ss << x[0];
   ui.lineEd_X->setText(QString::fromStdString(ss.str()));
-  ss.str(""); ss << y;
+  ss.str(""); ss << x[1];
   ui.lineEd_Y->setText(QString::fromStdString(ss.str()));
-  ss.str(""); ss << z;
+  ss.str(""); ss << x[2];
   ui.lineEd_Z->setText(QString::fromStdString(ss.str()));
   ss.precision(4);
 
-  ss.str(""); ss << t1 *180/M_PI << "°";
+  ss.str(""); ss << q[0] *180/M_PI << "°";
   s=ss.str();
   ui.lineEd_t1->setText(QString::fromUtf8(s.c_str()));
-  ss.str(""); ss << t2*180/M_PI << "°";
+  ss.str(""); ss << q[1]*180/M_PI << "°";
   s=ss.str();
   ui.lineEd_t2->setText(QString::fromUtf8(s.c_str()));
-  ss.str(""); ss << t3*180/M_PI << "°";
+  ss.str(""); ss << q[2]*180/M_PI << "°";
    s=ss.str();
   ui.lineEd_t3->setText(QString::fromUtf8(s.c_str()));
   ss.str(""); ss << status;
@@ -197,19 +197,20 @@ void MainWindow::showValues(){
 }
 
 void MainWindow::angleGetAndSend(){
-  float t1,t2,t3;
-  float x,y,z;
+  std::vector<float> q(3,0);
+  std::vector<float> dq(3,90);
+  std::vector<float> x(3,0);
       float xi,yi,zi;
-  x = (float)ui.Slider_X->value() / 10;
-  y = (float)ui.Slider_Y->value() / 10;
-  z = (float)ui.Slider_Z->value() / 10;
-  kinematics.delta_calcInverse(x,y,z,t1,t2,t3);
-  t1 = t1 *180/M_PI;
-  t2 = t2 *180/M_PI;
-  t3 = t3 *180/M_PI;
-  kinematics.delta_calcForward(t1,t2,t3,xi,yi,zi);
-  qnode.sendDeltaKartPos(xi,yi,zi);
-  qnode.sendDeltaAngle(t1,t2,t3,90,90,90);
+  x[0] = (float)ui.Slider_X->value() / 10;
+  x[1]  = (float)ui.Slider_Y->value() / 10;
+  x[2]  = (float)ui.Slider_Z->value() / 10;
+  kinematics.delta_calcInverse(x,q);
+
+  kinematics.rad2deg(q);
+  kinematics.delta_calcForward(q,x);
+  qnode.sendDeltaCart(x);
+
+ qnode.sendDeltaAngle(q,dq);
 }
 
 void MainWindow::on_sendButton_clicked()
@@ -217,7 +218,12 @@ void MainWindow::on_sendButton_clicked()
    if(ui.cubicCheck->isChecked()){
      float te= ui.durEd->text().toFloat();
      float stepSize= ui.stepsizeEd->text().toFloat();
-     goCubic(te,stepSize);
+     if(ui.cartesianCheck->isChecked()){
+       goCubicCart(te,stepSize);
+     }
+     else{
+       goCubic(te,stepSize);
+     }
    }
    else{
      angleGetAndSend();
@@ -242,35 +248,79 @@ void MainWindow::on_contsendCheck_clicked(bool checked)
 void MainWindow::goCubic(float te,float stepSize){
   std::string state = qnode.getDeltaInfo("GETSTATE");
   if(state.compare("WAITING")==0){
-    float goal_t1,goal_t2,goal_t3;
-    float start_t1,start_t2,start_t3;
-    float t1, t2, t3;
-    float vt1, vt2, vt3;
-    float x,y,z;
-    float xi,yi,zi;
-    x = (float)ui.Slider_X->value() / 10;
-    y = (float)ui.Slider_Y->value() / 10;
-    z = (float)ui.Slider_Z->value() / 10;
-    kinematics.delta_calcInverse(x,y,z,goal_t1,goal_t2,goal_t3);
-    goal_t1 = goal_t1 *180/M_PI;
-    goal_t2 = goal_t2 *180/M_PI;
-    goal_t3 = goal_t3 *180/M_PI;
-    qnode.getDeltaAngles("GETANGLES",start_t1,start_t2,start_t3);
+    std::vector<float> q_end(3,0);
+    std::vector<float> q_start(3,0);
+    std::vector<float> q(3,0);
+    std::vector<float> dq(3,0);
+    std::vector<float> pos_end(3,0);
+    std::vector<float> xi(3,0);
+
+    pos_end[0] = (float)ui.Slider_X->value() / 10;
+    pos_end[1] = (float)ui.Slider_Y->value() / 10;
+    pos_end[2] = (float)ui.Slider_Z->value() / 10;
+
+    kinematics.delta_calcInverse(pos_end,q_end);
+    kinematics.rad2deg(q_end);
+    qnode.getDeltaAngles("GETANGLES", q_start);
 
     ros::Time endTime = ros::Time::now() + ros::Duration(te);
     ros::Time startTime = ros::Time::now();
     ros::Rate rate(1/stepSize);
 
     float a = (float)ui.sliderAngleStep->value();
+    std::vector<float> dq_end(3,a);
+
     while(ros::ok() && ros::Time::now()<= endTime){
       ros::Duration tr = ros::Time::now() - startTime;
       double t = tr.toSec();
-      deltaplanner.getCubicAngle(start_t1,goal_t1,te,t,a,t1,vt1);
-      deltaplanner.getCubicAngle(start_t2,goal_t2,te,t,a,t2,vt2);
-      deltaplanner.getCubicAngle(start_t3,goal_t3,te,t,a,t3,vt3);
-      kinematics.delta_calcForward(t1,t2,t3,xi,yi,zi);
-      qnode.sendDeltaKartPos(xi,yi,zi);
-      qnode.sendDeltaAngle(t1,t2,t3,vt1,vt2,vt3);
+      deltaplanner.getCubicAngle(te,t,q_start,q_end,dq_end,q,dq);
+
+      kinematics.delta_calcForward(q,xi);
+      qnode.sendDeltaCart(xi);
+      qnode.sendDeltaAngle(q,dq);
+
+      ros::spinOnce();
+      rate.sleep();
+    }
+  }
+}
+
+void MainWindow::goCubicCart(float te,float stepSize){
+  std::string state = qnode.getDeltaInfo("GETSTATE");
+  if(state.compare("WAITING")==0){
+
+
+    float t1, t2, t3;
+    float vt1, vt2, vt3;
+
+    std::vector<float> pos_start(3,0);
+    std::vector<float> q_start(3,0);
+    std::vector<float> pos_end(3,0);
+    std::vector<float> xi(3,0);
+    std::vector<float> dxi(3,0);
+    std::vector<float> q(3,0);
+    std::vector<float> dq(3,0);
+    pos_end[0] = (float)ui.Slider_X->value() / 10;
+    pos_end[1] = (float)ui.Slider_Y->value() / 10;
+    pos_end[2] = (float)ui.Slider_Z->value() / 10;
+
+
+    qnode.getDeltaAngles("GETANGLES",q_start);
+    kinematics.delta_calcForward(q_start,pos_start);
+    ros::Time endTime = ros::Time::now() + ros::Duration(te);
+    ros::Time startTime = ros::Time::now();
+    ros::Rate rate(1/stepSize);
+
+    while(ros::ok() && ros::Time::now()<= endTime){
+      ros::Duration tr = ros::Time::now() - startTime;
+      double t = tr.toSec();
+
+      deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
+
+      qnode.sendDeltaCart(xi);
+      qnode.sendDeltaVel(dq);
+      kinematics.rad2deg(q);
+      qnode.sendDeltaAngle(q,dq);
       ros::spinOnce();
       rate.sleep();
     }

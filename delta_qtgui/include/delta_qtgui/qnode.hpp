@@ -24,6 +24,8 @@
 #include <rosgraph_msgs/Log.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <delta_arduino/GetInfo.h>
+#include <geometry_msgs/Twist.h>
+#include <vector>
 
 /*****************************************************************************
 ** Namespaces
@@ -44,11 +46,12 @@ public:
 	bool init(const std::string &master_url, const std::string &host_url);
 	void run();
   void sendDeltaCmd(std::string cmd);
-  void sendDeltaAngle(float t1, float t2, float t3,float v1, float v2, float v3);
+  void sendDeltaAngle(const std::vector<float> &q, const std::vector<float> &dq);
   void rosoutCallback(const rosgraph_msgs::Log::ConstPtr &msg);
   std::string getDeltaInfo(std::string cmd);
-  void getDeltaAngles(std::string cmd, float &t1, float &t2, float &t3);
-  void sendDeltaKartPos(float x, float y, float z);
+  void getDeltaAngles(std::string cmd, std::vector<float> &q);
+  void sendDeltaCart(const std::vector<float> &x);
+  void sendDeltaVel(const std::vector<float> &dx);
 	/*********************
 	** Logging
 	**********************/
@@ -74,6 +77,7 @@ private:
   ros::Publisher cmdDelta;
   ros::Publisher cmdAngle;
   ros::Publisher cmdKart;
+  ros::Publisher cmdVel;
   ros::Subscriber rosout;
   delta_arduino::GetInfo infoSrv;
   ros::ServiceClient infoClient;

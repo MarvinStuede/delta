@@ -62,6 +62,7 @@ bool QNode::init() {
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
   cmdKart = n.advertise<geometry_msgs::PoseStamped>("/delta/set_cartesian",1000);
+  cmdVel = n.advertise<geometry_msgs::Twist>("/delta/set_velocity",1000);
 	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
  // rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
   infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
@@ -84,7 +85,9 @@ bool QNode::init(const std::string &master_url, const std::string &host_url) {
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
   cmdKart = n.advertise<geometry_msgs::Pose>("/delta/set_cartesian",1000);
+    cmdVel = n.advertise<geometry_msgs::Twist>("/delta/set_velocity",1000);
   chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+
    infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
   //rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
 	start();
@@ -108,39 +111,49 @@ std::string QNode::getDeltaInfo(std::string cmd){
     log(Info,std::string("Received from Info Call: ")+infoSrv.response.out);
     return infoSrv.response.out;
 }
-void QNode::getDeltaAngles(std::string cmd, float &t1, float &t2, float &t3){
+void QNode::getDeltaAngles(std::string cmd, std::vector<float> &q){
   infoSrv.request.in=cmd;
   infoClient.call(infoSrv);
-  t1=infoSrv.response.theta1;
-  t2=infoSrv.response.theta2;
-  t3=infoSrv.response.theta3;
+  q[0]=infoSrv.response.theta1;
+  q[1]=infoSrv.response.theta2;
+  q[2]=infoSrv.response.theta3;
 
 }
 
-void QNode::sendDeltaAngle(float t1, float t2, float t3, float v1, float v2, float v3){
+void QNode::sendDeltaAngle(const std::vector<float> &q, const std::vector<float> &dq){
   if(ros::ok()) {
     delta_arduino::cmdAngle angles;
-    angles.theta1=t1;
-    angles.theta2=t2;
-    angles.theta3=t3;
-    angles.vtheta1=v1;
-    angles.vtheta2=v2;
-    angles.vtheta3=v3;
+    angles.theta1=q[0];
+    angles.theta2=q[1];
+    angles.theta3=q[2];
+    angles.vtheta1=dq[0];
+    angles.vtheta2=dq[1];
+    angles.vtheta3=dq[2];
     cmdAngle.publish(angles);
 
   }
 }
-void QNode::sendDeltaKartPos(float x, float y, float z){
+void QNode::sendDeltaCart(const std::vector<float> &x){
 
   if(ros::ok()) {
     geometry_msgs::PoseStamped point;
-    point.pose.position.x = x/1000;
-    point.pose.position.y = y/1000;
-    point.pose.position.z = z/1000;
+    point.pose.position.x = x[0]/1000;
+    point.pose.position.y = x[1]/1000;
+    point.pose.position.z = x[2]/1000;
     point.header.frame_id ="delta_base";
     point.header.stamp = ros::Time::now();
-
     cmdKart.publish(point);
+
+  }
+}
+void QNode::sendDeltaVel(const std::vector<float> &dx){
+
+  if(ros::ok()) {
+    geometry_msgs::Twist vel;
+    vel.angular.x=dx[0];
+    vel.angular.y=dx[1];
+    vel.angular.z=dx[2];
+    cmdVel.publish(vel);
 
   }
 }

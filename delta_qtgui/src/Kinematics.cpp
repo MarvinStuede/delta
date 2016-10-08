@@ -23,7 +23,7 @@ Kinematics::Kinematics(float e_radius, float f_radius, float forearm, float bice
 using namespace std;
 int Kinematics::delta_calcForward(const vector<float> &theta, vector<float> &x) {
   //Direkte Kinematik
-     float t = (f-e)*tan30/2;
+     float t = (f-e);//*tan30/2;
      float dtr = -pi/(float)180.0;
 
      float theta0 = theta[0] * dtr;
@@ -193,7 +193,7 @@ int Kinematics::delta_calcParallelAngle(const vector<float> &x,const vector<floa
 
 using namespace Eigen;
 void Kinematics::delta_DirJacMatrix(const vector<float> &phi, const vector<float> &psi, const vector<float> &theta, Matrix3f & OUTPUT){
-
+  //Direkte Jacobimatrix
   float T1 = 0;
   float T2 = 2*M_PI/3;
   float T3 = 4*M_PI/3;
@@ -236,7 +236,7 @@ void Kinematics::delta_DirJacMatrix(const vector<float> &phi, const vector<float
 
 }
 void Kinematics::delta_InvJacMatrix(const vector<float> &phi, const vector<float> &psi,Matrix3f & OUTPUT){
-
+  //Inverse Jacobimatrix
   float T1 = rf/1000;
   float T2 = cos(psi[0]);
   float T3 = sin(phi[0]);
@@ -250,18 +250,19 @@ void Kinematics::delta_InvJacMatrix(const vector<float> &phi, const vector<float
 
 }
 int Kinematics::delta_calcJointVel(const vector<float> &x,vector<float> &dx,vector<float> &theta, vector<float> &dtheta){
-
+//Berechnet die Gelenkgeschwindigkeiten anhand der Endeffektorgeschwindigkeit und der direkten und inversen Jacobimatrix
+  //dq = B⁻¹ * A * dxe
   vector<float> phi(3,0);
   vector<float> psi(3,0);
   Vector3f dx_e(dx[0],dx[1],dx[2]);
 
   delta_calcParallelAngle(x, theta, psi, phi);
 
-  Matrix3f Jac_dir = Matrix3f::Zero(3,3);
-  Matrix3f Jac_inv = Matrix3f::Zero(3,3);
-  delta_DirJacMatrix(phi,psi,theta,Jac_dir);
-  delta_InvJacMatrix(phi,psi,Jac_inv);
-  Matrix3f Inv_Jacobian = Jac_inv.inverse() * Jac_dir;
+  Matrix3f A = Matrix3f::Zero(3,3);
+  Matrix3f B = Matrix3f::Zero(3,3);
+  delta_DirJacMatrix(phi,psi,theta,A);
+  delta_InvJacMatrix(phi,psi,B);
+  Matrix3f Inv_Jacobian = B.inverse() * A;
   Vector3f dtheta_e = Inv_Jacobian * dx_e;
   for (int k=0;k<3;k++) dtheta[k] = dtheta_e(k)/1000*180/M_PI;
 

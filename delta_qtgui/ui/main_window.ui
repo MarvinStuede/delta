@@ -222,55 +222,12 @@
         <bool>true</bool>
        </property>
       </widget>
-      <widget class="QSlider" name="sliderAngleStep">
-       <property name="geometry">
-        <rect>
-         <x>80</x>
-         <y>550</y>
-         <width>160</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="minimum">
-        <number>0</number>
-       </property>
-       <property name="maximum">
-        <number>25</number>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-      <widget class="QLabel" name="sliderAngleLabel">
-       <property name="geometry">
-        <rect>
-         <x>100</x>
-         <y>520</y>
-         <width>59</width>
-         <height>14</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <weight>50</weight>
-         <bold>false</bold>
-         <underline>false</underline>
-         <strikeout>false</strikeout>
-        </font>
-       </property>
-       <property name="text">
-        <string>0</string>
-       </property>
-      </widget>
       <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>30</x>
          <y>400</y>
-         <width>131</width>
+         <width>151</width>
          <height>54</height>
         </rect>
        </property>
@@ -279,6 +236,12 @@
          <layout class="QVBoxLayout" name="verticalLayout_9">
           <item>
            <widget class="QLabel" name="label_4">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Step Size</string>
             </property>
@@ -286,8 +249,20 @@
           </item>
           <item>
            <widget class="QLabel" name="label_5">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>82</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="text">
-             <string>Duration</string>
+             <string>Max. Speed</string>
             </property>
            </widget>
           </item>
@@ -297,8 +272,14 @@
          <layout class="QVBoxLayout" name="verticalLayout_8">
           <item>
            <widget class="QLineEdit" name="stepsizeEd">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
-             <string>0.008</string>
+             <string>0.005</string>
             </property>
             <property name="readOnly">
              <bool>false</bool>
@@ -307,8 +288,14 @@
           </item>
           <item>
            <widget class="QLineEdit" name="durEd">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
-             <string>0.8</string>
+             <string>35</string>
             </property>
             <property name="readOnly">
              <bool>false</bool>
@@ -575,17 +562,29 @@
         <string>Cartesian</string>
        </property>
       </widget>
+      <widget class="QPushButton" name="houseButton">
+       <property name="geometry">
+        <rect>
+         <x>400</x>
+         <y>420</y>
+         <width>80</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>HOUSE</string>
+       </property>
+      </widget>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>cubicCheck</zorder>
-      <zorder>sliderAngleStep</zorder>
-      <zorder>sliderAngleLabel</zorder>
       <zorder>label_workspace</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>layoutWidget</zorder>
       <zorder>resetButton</zorder>
       <zorder>cartesianCheck</zorder>
+      <zorder>houseButton</zorder>
      </widget>
     </item>
    </layout>

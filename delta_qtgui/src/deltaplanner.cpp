@@ -7,9 +7,9 @@ DeltaPlanner::DeltaPlanner():kinematics(32,80,295,100)
 
 }
 void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_start, const std::vector<float> & q_end,std::vector<float> & dq_end,std::vector<float> & q,std::vector<float> & dq){
+//Berechnet Gelenkwinkel mittels kubischer Interpolation
+//Da PTP Bewegung ist die Bewegung nicht geradlinig
   for(int i=0;i<3;i++){
-    if(q_end[i]<q_start[i]) dq_end[i] *= -1;
-
     float a0 = q_start[i];
     float a2 = dq_end[i]/(2*te) - 3*(q_start[i]+ (dq_end[i] * te)/(2) - q_end[i])/(te*te);
     float a3 = (2*(q_start[i] + (dq_end[i]*te)/(2) - q_end[i]))/(te * te *te);
@@ -20,6 +20,7 @@ void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_
   }
 }
 void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> & pos_start, const std::vector<float> & pos_end, std::vector<float> &x, std::vector<float> &dx, std::vector<float> &q,std::vector<float> &dq){
+ //Berechnet Gelenkwinkel auf kubisch interpolierter PTP-Bahn im kartesischen (notwendig für echte Linearbewegungen)
   float a0, a2, a3;
   float ve=0;
   for (int i=0;i<3;i++){

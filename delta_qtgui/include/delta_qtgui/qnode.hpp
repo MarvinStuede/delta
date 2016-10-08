@@ -61,7 +61,7 @@ public:
 	         Warn,
 	         Error,
 	         Fatal
-	 };
+   };
 
 	QStringListModel* loggingModel() { return &logging_model; }
 	void log( const LogLevel &level, const std::string &msg);

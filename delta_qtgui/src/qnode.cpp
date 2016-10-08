@@ -126,9 +126,12 @@ void QNode::sendDeltaAngle(const std::vector<float> &q, const std::vector<float>
     angles.theta1=q[0];
     angles.theta2=q[1];
     angles.theta3=q[2];
-    angles.vtheta1=dq[0];
-    angles.vtheta2=dq[1];
-    angles.vtheta3=dq[2];
+   // angles.vtheta1=dq[0];
+   // angles.vtheta2=dq[1];
+   // angles.vtheta3=dq[2];
+    angles.vtheta1=40;
+    angles.vtheta2=40;
+    angles.vtheta3=40;
     cmdAngle.publish(angles);
 
   }

@@ -45,8 +45,9 @@ public:
 	void showNoMasterMessage();
   void angleGetAndSend();
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
-  void goCubic(float te,float stepSize);
-  void goCubicCart(float te,float stepSize);
+  void goCubic(float vmax,float stepSize);
+  void goHouse(float vmax,float stepSize);
+
 public Q_SLOTS:
 	/******************************************
 	** Auto-connections (connectSlotsByName())
@@ -68,13 +69,12 @@ public Q_SLOTS:
   void on_contsendCheck_clicked(bool checked);
   void on_cubicCheck_clicked(bool checked);
   void on_sliderAngleStep_valueChanged(int value);
-      void on_resetTopButton_clicked();
+  void on_resetTopButton_clicked();
+  void on_houseButton_clicked();
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
-
-
 
 
 private:
@@ -83,6 +83,7 @@ private:
 	QNode qnode;
   Kinematics kinematics;
   DeltaPlanner deltaplanner;
+
 };
 
 }  // namespace delta_qtgui

@@ -216,14 +216,10 @@ void MainWindow::angleGetAndSend(){
 void MainWindow::on_sendButton_clicked()
 {
    if(ui.cubicCheck->isChecked()){
-     float te= ui.durEd->text().toFloat();
+     float vmax= ui.durEd->text().toFloat();
      float stepSize= ui.stepsizeEd->text().toFloat();
-     if(ui.cartesianCheck->isChecked()){
-       goCubicCart(te,stepSize);
-     }
-     else{
-       goCubic(te,stepSize);
-     }
+     goCubic(vmax,stepSize);
+
    }
    else{
      angleGetAndSend();
@@ -245,97 +241,187 @@ void MainWindow::on_contsendCheck_clicked(bool checked)
     ui.sendButton->setEnabled(!checked);
 }
 
-void MainWindow::goCubic(float te,float stepSize){
+void MainWindow::goCubic(float vmax,float stepSize){
   std::string state = qnode.getDeltaInfo("GETSTATE");
+
   if(state.compare("WAITING")==0){
     std::vector<float> q_end(3,0);
     std::vector<float> q_start(3,0);
     std::vector<float> q(3,0);
     std::vector<float> dq(3,0);
+    std::vector<float> pos_start(3,0);
     std::vector<float> pos_end(3,0);
     std::vector<float> xi(3,0);
+    std::vector<float> dxi(3,0);
+
+    float te = 0;
 
     pos_end[0] = (float)ui.Slider_X->value() / 10;
     pos_end[1] = (float)ui.Slider_Y->value() / 10;
     pos_end[2] = (float)ui.Slider_Z->value() / 10;
 
-    kinematics.delta_calcInverse(pos_end,q_end);
-    kinematics.rad2deg(q_end);
     qnode.getDeltaAngles("GETANGLES", q_start);
+
+    bool moveCart = ui.cartesianCheck->isChecked();
+    kinematics.delta_calcInverse(pos_end,q_end);
+    kinematics.delta_calcForward(q_start,pos_start);
+    kinematics.rad2deg(q_end);
+
+    float tj = 0;
+    for(int j=0;j<3;j++){
+        tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
+        if (tj > te) te = tj;
+     }
+    std::stringstream ss;
+    ss.precision(4);
+    ss << te;
+    qnode.log(QNode::Info,ss.str());
 
     ros::Time endTime = ros::Time::now() + ros::Duration(te);
     ros::Time startTime = ros::Time::now();
     ros::Rate rate(1/stepSize);
 
-    float a = (float)ui.sliderAngleStep->value();
-    std::vector<float> dq_end(3,a);
+
+    std::vector<float> dq_end(3,0);
 
     while(ros::ok() && ros::Time::now()<= endTime){
       ros::Duration tr = ros::Time::now() - startTime;
       double t = tr.toSec();
-      deltaplanner.getCubicAngle(te,t,q_start,q_end,dq_end,q,dq);
 
-      kinematics.delta_calcForward(q,xi);
+      if(moveCart){
+        deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
+        kinematics.rad2deg(q);
+      }
+      else{
+
+        deltaplanner.getCubicAngle(te,t,q_start,q_end,dq_end,q,dq);
+        kinematics.delta_calcForward(q,xi);
+      }
+
       qnode.sendDeltaCart(xi);
       qnode.sendDeltaAngle(q,dq);
-
       ros::spinOnce();
       rate.sleep();
     }
   }
 }
 
-void MainWindow::goCubicCart(float te,float stepSize){
+void MainWindow::goHouse(float vmax,float stepSize){
   std::string state = qnode.getDeltaInfo("GETSTATE");
+
   if(state.compare("WAITING")==0){
-
-
-    float t1, t2, t3;
-    float vt1, vt2, vt3;
-
-    std::vector<float> pos_start(3,0);
+    std::vector<float> q_end(3,0);
     std::vector<float> q_start(3,0);
+    std::vector<float> q(3,0);
+    std::vector<float> dq(3,0);
+    std::vector<float> pos_start(3,0);
     std::vector<float> pos_end(3,0);
     std::vector<float> xi(3,0);
     std::vector<float> dxi(3,0);
-    std::vector<float> q(3,0);
-    std::vector<float> dq(3,0);
-    pos_end[0] = (float)ui.Slider_X->value() / 10;
-    pos_end[1] = (float)ui.Slider_Y->value() / 10;
-    pos_end[2] = (float)ui.Slider_Z->value() / 10;
+    std::vector< std::vector<float> > arr(10, std::vector<float>(3));
 
 
-    qnode.getDeltaAngles("GETANGLES",q_start);
-    kinematics.delta_calcForward(q_start,pos_start);
-    ros::Time endTime = ros::Time::now() + ros::Duration(te);
-    ros::Time startTime = ros::Time::now();
-    ros::Rate rate(1/stepSize);
+    arr[0][0]=-30;
+    arr[0][1]=-30;
+    arr[0][2]=-310.3;
 
-    while(ros::ok() && ros::Time::now()<= endTime){
-      ros::Duration tr = ros::Time::now() - startTime;
-      double t = tr.toSec();
+    arr[1][0]=30;
+    arr[1][1]=-30;
+    arr[1][2]=-310.3;
 
-      deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
+    arr[2][0]=-30;
+    arr[2][1]=30;
+    arr[2][2]=-310.3;
 
-      qnode.sendDeltaCart(xi);
-      qnode.sendDeltaVel(dq);
-      kinematics.rad2deg(q);
-      qnode.sendDeltaAngle(q,dq);
-      ros::spinOnce();
-      rate.sleep();
-    }
+    arr[3][0]=30;
+    arr[3][1]=30;
+    arr[3][2]=-310.3;
+
+    arr[4][0]=0;
+    arr[4][1]=60;
+    arr[4][2]=-310.3;
+
+    arr[5][0]=-30;
+    arr[5][1]=30;
+    arr[5][2]=-310.3;
+
+    arr[6][0]=-30;
+    arr[6][1]=-30;
+    arr[6][2]=-310.3;
+
+    arr[7][0]=30;
+    arr[7][1]=30;
+    arr[7][2]=-310.3;
+
+    arr[8][0]=30;
+    arr[8][1]=-30;
+    arr[8][2]=-310.3;
+
+    arr[9][0]=0;
+    arr[9][1]=0;
+    arr[9][2]=-284;
+
+
+    float te = 0;
+    for(int p = 0; p<10;p++){
+          pos_end[0] = arr[p][0];
+          pos_end[1] = arr[p][1];
+          pos_end[2] = arr[p][2];
+
+          qnode.getDeltaAngles("GETANGLES", q_start);
+
+          bool moveCart = ui.cartesianCheck->isChecked();
+          kinematics.delta_calcInverse(pos_end,q_end);
+          kinematics.delta_calcForward(q_start,pos_start);
+          kinematics.rad2deg(q_end);
+
+          float tj = 0;
+          for(int j=0;j<3;j++){
+              tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
+              if (tj > te) te = tj;
+           }
+
+          ros::Time endTime = ros::Time::now() + ros::Duration(te);
+          ros::Time startTime = ros::Time::now();
+          ros::Rate rate(1/stepSize);
+
+          std::vector<float> dq_end(3,0);
+
+          while(ros::ok() && ros::Time::now()<= endTime){
+            ros::Duration tr = ros::Time::now() - startTime;
+            double t = tr.toSec();
+
+            if(moveCart){
+              deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
+              kinematics.rad2deg(q);
+            }
+            else{
+
+              deltaplanner.getCubicAngle(te,t,q_start,q_end,dq_end,q,dq);
+              kinematics.delta_calcForward(q,xi);
+            }
+
+            qnode.sendDeltaCart(xi);
+            qnode.sendDeltaAngle(q,dq);
+            ros::spinOnce();
+            rate.sleep();
+          }
+        }
+     ros::Duration(0.5).sleep();
   }
 }
 
 void MainWindow::on_cubicCheck_clicked(bool checked)
 {
         ui.contsendCheck->setEnabled(!checked);
+        ui.contsendCheck->setChecked(!checked);
 }
 
-void MainWindow::on_sliderAngleStep_valueChanged(int value)
+void MainWindow::on_houseButton_clicked()
 {
-
-    ui.sliderAngleLabel->setText(QString::number(ui.sliderAngleStep->value()));
+  float vmax= ui.durEd->text().toFloat();
+  float stepSize= ui.stepsizeEd->text().toFloat();
+  goHouse(vmax,stepSize);
 }
 
 /*****************************************************************************

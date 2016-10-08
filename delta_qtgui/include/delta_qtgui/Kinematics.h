@@ -2,7 +2,6 @@
 #define Kinematics_h
 
 #include "math.h"
-#include <Matrix.h>
 #include <vector>
 #include <eigen3/Eigen/Dense>
 class Kinematics
@@ -33,6 +32,5 @@ class Kinematics
 	    float f;
 		float re;
 		float rf;
-    Matrix matrix;
 };
 #endif

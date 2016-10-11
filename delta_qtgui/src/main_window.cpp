@@ -103,26 +103,30 @@ void MainWindow::on_enableButton_clicked()
 void MainWindow::on_resetButton_clicked()
 {
     qnode.sendDeltaCmd("RESET");
+    ui.Slider_X->setValue(0);
+    ui.Slider_Y->setValue(0);
+    ui.Slider_Z->setValue(-284 * 10);
+    showValues();
 }
 
 void MainWindow::on_Slider_X_valueChanged(int value)
 {
 
    showValues();
-   if(ui.contsendCheck->isChecked()) angleGetAndSend();
+   if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 
 }
 void MainWindow::on_lineEd_X_returnPressed()
 {
   ui.Slider_X->setValue(ui.lineEd_X->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) angleGetAndSend();
+  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_Slider_Y_valueChanged(int value)
 {
 
     showValues();
-    if(ui.contsendCheck->isChecked()) angleGetAndSend();
+    if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 
 
 }
@@ -130,19 +134,19 @@ void MainWindow::on_lineEd_Y_returnPressed()
 {
     ui.Slider_Y->setValue(ui.lineEd_Y->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) angleGetAndSend();
+  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_Slider_Z_valueChanged(int value)
 {
 
    showValues();
-   if(ui.contsendCheck->isChecked()) angleGetAndSend();
+   if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_lineEd_Z_returnPressed()
 {
     ui.Slider_Z->setValue(ui.lineEd_Z->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) angleGetAndSend();
+  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
 }
 
 void MainWindow::showValues(){
@@ -196,33 +200,62 @@ void MainWindow::showValues(){
   //ROS_INFO(s.c_str());
 }
 
-void MainWindow::angleGetAndSend(){
-  std::vector<float> q(3,0);
+void MainWindow::goCoordinatedLinear(float v){
+  std::vector<float> q_goal(3,0);
   std::vector<float> dq(3,90);
   std::vector<float> x(3,0);
-      float xi,yi,zi;
+  std::vector<float> q_start(3,0);
+  float tmax = 0;
+  std::vector<float> dist(3,0);
+
   x[0] = (float)ui.Slider_X->value() / 10;
   x[1]  = (float)ui.Slider_Y->value() / 10;
   x[2]  = (float)ui.Slider_Z->value() / 10;
-  kinematics.delta_calcInverse(x,q);
 
-  kinematics.rad2deg(q);
-  kinematics.delta_calcForward(q,x);
+  qnode.getDeltaAngles("GETANGLES", q_start);
+  kinematics.delta_calcInverse(x,q_goal);
+    kinematics.rad2deg(q_goal);
+  for(int i = 0;i<3;i++){
+      dist[i]=fabs(q_goal[i] - q_start[i]);
+
+      if (dist[i] / v > tmax) tmax = dist[i]/v;
+  }
+
+  dq[0]=dist[0]/tmax;
+  dq[1]=dist[1]/tmax;
+  dq[2]=dist[2]/tmax;
   qnode.sendDeltaCart(x);
 
- qnode.sendDeltaAngle(q,dq);
+ qnode.sendDeltaAngle(q_goal,dq);
+}
+void MainWindow::goUncoordinatedLinear(){
+
+  std::vector<float> q_goal(3,0);
+  std::vector<float> dq(3,90);
+  std::vector<float> x(3,0);
+
+  x[0] = (float)ui.Slider_X->value() / 10;
+  x[1]  = (float)ui.Slider_Y->value() / 10;
+  x[2]  = (float)ui.Slider_Z->value() / 10;
+
+  kinematics.delta_calcInverse(x,q_goal);
+  kinematics.rad2deg(q_goal);
+  qnode.sendDeltaCart(x);
+  qnode.sendDeltaAngle(q_goal,dq);
+
 }
 
 void MainWindow::on_sendButton_clicked()
 {
+   float vmax= ui.speedBox->text().toFloat();
    if(ui.cubicCheck->isChecked()){
-     float vmax= ui.durEd->text().toFloat();
+
      float stepSize= ui.stepsizeEd->text().toFloat();
      goCubic(vmax,stepSize);
 
    }
    else{
-     angleGetAndSend();
+     goCoordinatedLinear(vmax);
    }
 
 }
@@ -239,6 +272,10 @@ void MainWindow::on_resetTopButton_clicked()
 void MainWindow::on_contsendCheck_clicked(bool checked)
 {
     ui.sendButton->setEnabled(!checked);
+    ui.cubicCheck->setEnabled(!checked);
+    ui.cubicCheck->setChecked(false);
+    ui.cartesianCheck->setEnabled(!checked);
+    ui.cartesianCheck->setChecked(false);
 }
 
 void MainWindow::goCubic(float vmax,float stepSize){
@@ -299,6 +336,9 @@ void MainWindow::goCubic(float vmax,float stepSize){
       }
 
       qnode.sendDeltaCart(xi);
+              dq[0]=40;
+            dq[1]=40;
+            dq[2]=40;
       qnode.sendDeltaAngle(q,dq);
       ros::spinOnce();
       rate.sleep();
@@ -402,6 +442,9 @@ void MainWindow::goHouse(float vmax,float stepSize){
             }
 
             qnode.sendDeltaCart(xi);
+            dq[0]=40;
+            dq[1]=40;
+            dq[2]=40;
             qnode.sendDeltaAngle(q,dq);
             ros::spinOnce();
             rate.sleep();
@@ -414,16 +457,37 @@ void MainWindow::goHouse(float vmax,float stepSize){
 void MainWindow::on_cubicCheck_clicked(bool checked)
 {
         ui.contsendCheck->setEnabled(!checked);
-        ui.contsendCheck->setChecked(!checked);
+        ui.contsendCheck->setChecked(false);
+}
+void MainWindow::on_cartesianCheck_clicked(bool checked)
+{
+  if(checked) ui.cubicCheck->setChecked(true);
+  ui.contsendCheck->setEnabled(!checked);
+  ui.contsendCheck->setChecked(false);
 }
 
 void MainWindow::on_houseButton_clicked()
 {
-  float vmax= ui.durEd->text().toFloat();
+  float vmax= ui.speedBox->text().toFloat();
   float stepSize= ui.stepsizeEd->text().toFloat();
   goHouse(vmax,stepSize);
 }
+void MainWindow::on_pushButton_clicked()
+{
+      qnode.sendDeltaCmd("TURNOFF");
+}
 
+void MainWindow::on_speedSlider_valueChanged(int value)
+{
+    std::stringstream ss;
+    ss << value;
+    ui.speedBox->setText(QString::fromStdString(ss.str()));
+}
+
+void MainWindow::on_speedBox_returnPressed()
+{
+    ui.speedSlider->setValue( ui.speedBox->text().toFloat());
+}
 /*****************************************************************************
 ** Implementation [Configuration]
 *****************************************************************************/
@@ -454,5 +518,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
+
+
+
+
+
+
 
 

@@ -43,7 +43,8 @@ public:
 
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
-  void angleGetAndSend();
+  void goCoordinatedLinear(float v);
+  void goUncoordinatedLinear();
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float vmax,float stepSize);
   void goHouse(float vmax,float stepSize);
@@ -68,14 +69,17 @@ public Q_SLOTS:
   void on_sendButton_clicked();
   void on_contsendCheck_clicked(bool checked);
   void on_cubicCheck_clicked(bool checked);
-  void on_sliderAngleStep_valueChanged(int value);
   void on_resetTopButton_clicked();
   void on_houseButton_clicked();
+  void on_cartesianCheck_clicked(bool checked);
+  void on_pushButton_clicked();
+  void on_speedSlider_valueChanged(int value);
+  void on_speedBox_returnPressed();
+
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
-
 
 private:
 	Ui::MainWindowDesign ui;

@@ -39,6 +39,7 @@
 static float stepsCircle = 400 * STEPMODE;
 bool set_reset = false;
 bool enable = false;
+bool going_home = false;
 float factor =0.28;
 double lastTime;
 double stepTime;
@@ -50,6 +51,7 @@ enum state
     STATE_RESET,
     STATE_WAITING,
     STATE_MOVING,
+    STATE_DISABLING,
 
 }state_;
 state oldstate_;
@@ -63,6 +65,11 @@ AccelStepper 	b_stepper(AccelStepper::DRIVER, B_STEP_PIN, B_DIR_PIN);
 AccelStepper 	c_stepper(AccelStepper::DRIVER, C_STEP_PIN, C_DIR_PIN);
 MultiStepper  steppers;
 
+void setState(state new_state){
+  oldstate_=state_;
+  state_ = new_state;
+}
+
 void initialize(AccelStepper *stepper, int enable, int end) {
 
   stepper->setEnablePin(enable);
@@ -74,6 +81,12 @@ void initialize(AccelStepper *stepper, int enable, int end) {
   steppers.addStepper(*stepper);
   pinMode(end, INPUT);
 }
+void setStdValues(AccelStepper *stepper){
+  stepper->setMaxSpeed(stepsCircle/3);
+  stepper->setSpeed(stepsCircle*factor*0.9);
+  stepper->setAcceleration(20000);
+}
+
 void startCtrl(){
   digitalWrite(LED_PIN, HIGH);
   enable = true;
@@ -110,7 +123,7 @@ void checkEndstops(){
 bool checkWorkspace(float a_angle, float b_angle, float c_angle ){
 //Liefert false zurück, falls einer der Motorwinkel nicht im Intervall [0,-90°] liegen sollte
 if (a_angle >= -90.0 && b_angle >= -90.0 && c_angle >= -90.0){
-    if (a_angle <= 0.0 && b_angle <= 0.0 && c_angle <= 0.0){
+    if (a_angle <= 8.0 && b_angle <= 8.0 && c_angle <= 8.0){
       return true;
     }
     else return false;
@@ -201,6 +214,10 @@ void commandHandler(const std_msgs::String& cmdString){
     }
     else nh.logwarn("Motor Control already enabled");
   }
+  else if(command.equals("TURNOFF")){
+     nh.loginfo("delta/command received: TURNOFF");
+     setState(STATE_DISABLING);
+  }
   else{
     nh.logerror("delta/command not valid!");
   }
@@ -212,11 +229,12 @@ void srvHandler(const delta_arduino::GetInfo::Request& req, delta_arduino::GetIn
   if (command.equals("GETSTATE")){
     switch(state_)
     {
-      case STATE_OFF:     res.out="OFF";      break;
-      case STATE_INIT:    res.out="INIT";     break;
-      case STATE_RESET:   res.out="RESET";    break;
-      case STATE_WAITING: res.out="WAITING";  break;
-      case STATE_MOVING:  res.out="MOVING";   break;
+      case STATE_OFF:         res.out="OFF";         break;
+      case STATE_INIT:        res.out="INIT";        break;
+      case STATE_RESET:       res.out="RESET";       break;
+      case STATE_WAITING:     res.out="WAITING";     break;
+      case STATE_MOVING:      res.out="MOVING";      break;
+      case STATE_DISABLING:   res.out="DISABLING";   break;
     }
   }
   else if (command.equals("GETANGLES")){
@@ -270,21 +288,34 @@ void stateLoop()
           if(enable){
             oldstate_= state_;
             state_ = STATE_RESET;
+            setStdValues(&a_stepper);
+            setStdValues(&b_stepper);
+            setStdValues(&c_stepper);
             nh.loginfo("STATE 'INIT': Change to STATE 'RESET'");
-
           }
           break;
       }
       case STATE_RESET:
       {
-          if (oldstate_ != state_){
+
+          if (oldstate_ == STATE_INIT){
             nh.loginfo("STATE 'RESET': Drive Motors to endstops");
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
-            a_stepper.setSpeed(stepsCircle/4.5);
-            b_stepper.setSpeed(stepsCircle/4.5);
-            c_stepper.setSpeed(stepsCircle/4.5);
+            a_stepper.setSpeed(stepsCircle/10);
+            b_stepper.setSpeed(stepsCircle/15);
+            c_stepper.setSpeed(stepsCircle/15);
+            oldstate_ = state_;
+          }
+          else if (oldstate_ != state_){
+            nh.loginfo("STATE 'RESET': Drive Motors to endstops");
+            a_stepper.move(130*stepsCircle/360);
+            b_stepper.move(130*stepsCircle/360);
+            c_stepper.move(130*stepsCircle/360);
+            a_stepper.setSpeed(stepsCircle/4);
+            b_stepper.setSpeed(stepsCircle/4);
+            c_stepper.setSpeed(stepsCircle/4);
             oldstate_ = state_;
           }
           if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
@@ -295,17 +326,20 @@ void stateLoop()
                 a_stepper.setCurrentPosition(0);
                 b_stepper.setCurrentPosition(0);
                 c_stepper.setCurrentPosition(0);
-                a_stepper.moveTo(-11*stepsCircle/360);
-                b_stepper.moveTo(-11*stepsCircle/360);
-                c_stepper.moveTo(-11*stepsCircle/360);
+                a_stepper.move(-11*stepsCircle/360);
+                b_stepper.move(-11*stepsCircle/360);
+                c_stepper.move(-11*stepsCircle/360);
+                a_stepper.setSpeed(stepsCircle/4);
+                b_stepper.setSpeed(stepsCircle/4);
+                c_stepper.setSpeed(stepsCircle/4);
             }
             else{
                 a_stepper.setCurrentPosition(0);
                 b_stepper.setCurrentPosition(0);
                 c_stepper.setCurrentPosition(0);
+
                 set_reset = false;
-                 oldstate_ = state_;
-                state_ = STATE_WAITING;
+                setState(STATE_WAITING);
                 nh.loginfo("STATE 'RESET': Change to STATE 'WAITING'");
               }
           }
@@ -335,10 +369,44 @@ void stateLoop()
             publishJointState(4.0);
 
             if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
-              oldstate_ = state_;
-              state_ = STATE_WAITING;
+              setState(STATE_WAITING);
             }
             break;
+        }
+        case STATE_DISABLING:
+        {
+          long positions[3];
+
+          if (oldstate_ != state_&& enable){
+            nh.loginfo("STATE 'DISABLING': Going home...");
+
+            positions[0]=0;
+            positions[1]=0;
+            positions[2]=0;
+
+            a_stepper.setMaxSpeed(stepsCircle/13);
+            b_stepper.setMaxSpeed(stepsCircle/13);
+            c_stepper.setMaxSpeed(stepsCircle/13);
+
+            steppers.moveTo(positions);
+            steppers.runSpeedToPosition();
+
+            nh.spinOnce();
+
+            positions[0]=-45 * stepsCircle/360;
+            positions[1]=3 * stepsCircle/360;
+            positions[2]=3 * stepsCircle/360;
+            a_stepper.setMaxSpeed(stepsCircle/25);
+            b_stepper.setMaxSpeed(stepsCircle/25);
+            c_stepper.setMaxSpeed(stepsCircle/25);
+
+            steppers.moveTo(positions);
+            steppers.runSpeedToPosition();
+            stopCtrl();
+            oldstate_ = state_;
+          }
+
+          break;
         }
     }
 }

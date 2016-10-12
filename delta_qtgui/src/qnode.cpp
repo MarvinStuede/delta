@@ -52,6 +52,8 @@ ROS_INFO(s.c_str());
 }
 
 bool QNode::init() {
+
+
 	ros::init(init_argc,init_argv,"delta_qtgui");
 	if ( ! ros::master::check() ) {
 		return false;
@@ -64,6 +66,7 @@ bool QNode::init() {
   cmdKart = n.advertise<geometry_msgs::PoseStamped>("/delta/set_cartesian",1000);
   cmdVel = n.advertise<geometry_msgs::Twist>("/delta/set_velocity",1000);
 	chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+  readJointState = n.subscribe("delta/joint_state",1000,&QNode::JointStateCallback,this);
  // rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
   infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
 
@@ -85,13 +88,26 @@ bool QNode::init(const std::string &master_url, const std::string &host_url) {
   cmdDelta = n.advertise<std_msgs::String>("/delta/command",1000);
   cmdAngle = n.advertise<delta_arduino::cmdAngle>("/delta/set_angle",1000);
   cmdKart = n.advertise<geometry_msgs::Pose>("/delta/set_cartesian",1000);
-    cmdVel = n.advertise<geometry_msgs::Twist>("/delta/set_velocity",1000);
+  cmdVel = n.advertise<geometry_msgs::Twist>("/delta/set_velocity",1000);
   chatter_publisher = n.advertise<std_msgs::String>("chatter", 1000);
+  readJointState = n.subscribe("delta/joint_state",1000,&QNode::JointStateCallback,this);
 
    infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
   //rosout = n.subscribe("rosout_agg",1000,&QNode::rosoutCallback,this);
 	start();
 	return true;
+}
+void QNode::JointStateCallback(const sensor_msgs::JointState &msg){
+  float q0;
+  float q1;
+  float q2;
+
+  q0 = msg.position[0];
+  q1 = msg.position[1];
+  q2 = msg.position[2];
+
+
+  Q_EMIT JointStateUpdated(q0,q1,q2);
 }
 
 void QNode::sendDeltaCmd(std::string cmd){

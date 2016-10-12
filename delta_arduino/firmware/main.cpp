@@ -143,10 +143,6 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
       int cmd_v1 = cmdAngle.vtheta1 * stepsCircle/360;
       int cmd_v2 = cmdAngle.vtheta2 * stepsCircle/360;
       int cmd_v3 = cmdAngle.vtheta3 * stepsCircle/360;
-      /*long positions[3];
-      positions[0]=cmd_theta1;
-      positions[1]=cmd_theta2;
-      positions[2]=cmd_theta3;*/
 
       int act_theta1 = a_stepper.currentPosition();
       int act_theta2 = b_stepper.currentPosition();
@@ -167,23 +163,22 @@ void moveMotorTo(const delta_arduino::cmdAngle& cmdAngle){
             a_stepper.setSpeed(cmd_v1);
             b_stepper.setSpeed(cmd_v2);
             c_stepper.setSpeed(cmd_v3);
-           // steppers.moveTo(positions);
-            oldstate_ = state_;
-            state_ = STATE_MOVING;
+
+            setState(STATE_MOVING);
             //nh.loginfo("STATE 'WAITING': Change to STATE 'MOVING'");
           }
       }
 
       else{
-         nh.logerror("Commanded Joint angle not valid");
+         nh.logerror("Set_Angle Callback: Commanded Joint angle not valid");
       }
     }
     else{
-      nh.logwarn("Wrong State active");
+      nh.logwarn("Set_Angle Callback: Wrong State active");
     }
   }
   else{
-    nh.logwarn("Motor Control not enabled");
+    nh.logwarn("Set_Angle Callback: Motor Control not enabled");
   }
 }
 ros::Subscriber<delta_arduino::cmdAngle> subCmdAngle("delta/set_angle",&moveMotorTo);
@@ -192,35 +187,41 @@ void commandHandler(const std_msgs::String& cmdString){
   //Subscriber um Standardkommandos auszführen (durch Service ersetzen??)
   String command = cmdString.data;
   if (command.equals("RESET")){
-    nh.loginfo("delta/command received: RESET");
     if(state_ != STATE_RESET){
-      oldstate_ = state_;
-      state_ = STATE_RESET;
+      setState(STATE_RESET);
     }
     else{
       nh.logwarn("Already resetting");
     }
   }
   else if(command.equals("CTRLSTOP")){
-    nh.loginfo("delta/command received: CTRLSTOP");
     stopCtrl();
   }
   else if(command.equals("CTRLSTART")){
-    nh.loginfo("delta/command received: CTRLSTART");
     if (!enable) {
-      startCtrl();
-     oldstate_ = state_;
-     state_ = STATE_INIT;
+     startCtrl();
+     setState(STATE_INIT);
     }
     else nh.logwarn("Motor Control already enabled");
   }
   else if(command.equals("TURNOFF")){
-     nh.loginfo("delta/command received: TURNOFF");
+
      setState(STATE_DISABLING);
+  }
+  else if(command.equals("STOPMOVE")){
+     a_stepper.stop();
+     b_stepper.stop();
+     c_stepper.stop();
+     setState(STATE_WAITING);
   }
   else{
     nh.logerror("delta/command not valid!");
   }
+
+  String msg = "Command Received: " + command;
+  char c_msg[128];
+  msg.toCharArray(c_msg,128);
+  nh.loginfo(c_msg);
 }
 ros::Subscriber<std_msgs::String> subCmdString("delta/command",&commandHandler);
 
@@ -313,9 +314,9 @@ void stateLoop()
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
-            a_stepper.setSpeed(stepsCircle/4);
-            b_stepper.setSpeed(stepsCircle/4);
-            c_stepper.setSpeed(stepsCircle/4);
+            a_stepper.setSpeed(stepsCircle/10);
+            b_stepper.setSpeed(stepsCircle/10);
+            c_stepper.setSpeed(stepsCircle/10);
             oldstate_ = state_;
           }
           if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){

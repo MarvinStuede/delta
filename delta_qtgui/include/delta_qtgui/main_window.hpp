@@ -49,6 +49,7 @@ public:
   void goCubic(float vmax,float stepSize);
   void goHouse(float vmax,float stepSize);
 
+
 public Q_SLOTS:
 	/******************************************
 	** Auto-connections (connectSlotsByName())
@@ -67,19 +68,20 @@ public Q_SLOTS:
   void on_lineEd_Y_returnPressed();
   void on_lineEd_Z_returnPressed();
   void on_sendButton_clicked();
-  void on_contsendCheck_clicked(bool checked);
-  void on_cubicCheck_clicked(bool checked);
   void on_resetTopButton_clicked();
   void on_houseButton_clicked();
-  void on_cartesianCheck_clicked(bool checked);
   void on_pushButton_clicked();
   void on_speedSlider_valueChanged(int value);
   void on_speedBox_returnPressed();
+  void stopMotion();
+  void on_stopButton_clicked();
 
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
+    void updateJointState(float q0, float q1, float q2);
+
 
 private:
 	Ui::MainWindowDesign ui;

@@ -25,6 +25,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <delta_arduino/GetInfo.h>
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/JointState.h>
 #include <vector>
 
 /*****************************************************************************
@@ -52,6 +53,8 @@ public:
   void getDeltaAngles(std::string cmd, std::vector<float> &q);
   void sendDeltaCart(const std::vector<float> &x);
   void sendDeltaVel(const std::vector<float> &dx);
+  void JointStateCallback(const sensor_msgs::JointState &msg);
+
 	/*********************
 	** Logging
 	**********************/
@@ -68,7 +71,8 @@ public:
 
 Q_SIGNALS:
 	void loggingUpdated();
-    void rosShutdown();
+  void rosShutdown();
+  void JointStateUpdated(float q1, float q2, float q3);
 
 private:
 	int init_argc;
@@ -79,10 +83,12 @@ private:
   ros::Publisher cmdKart;
   ros::Publisher cmdVel;
   ros::Subscriber rosout;
+  ros::Subscriber readJointState;
   delta_arduino::GetInfo infoSrv;
   ros::ServiceClient infoClient;
 
-    QStringListModel logging_model;
+
+  QStringListModel logging_model;
 };
 
 }  // namespace delta_qtgui

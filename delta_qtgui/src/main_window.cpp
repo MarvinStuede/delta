@@ -21,6 +21,7 @@
 namespace delta_qtgui {
 
 using namespace Qt;
+using namespace std;
 
 /*****************************************************************************
 ** Implementation [MainWindow]
@@ -41,11 +42,12 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 	ui.tab_manager->setCurrentIndex(0); // ensure the first tab is showing - qt-designer should have this already hardwired, but often loses it (settings?).
     QObject::connect(&qnode, SIGNAL(rosShutdown()), this, SLOT(close()));
 
-	/*********************
-	** Logging
-	**********************/
 	ui.view_logging->setModel(qnode.loggingModel());
     QObject::connect(&qnode, SIGNAL(loggingUpdated()), this, SLOT(updateLoggingView()));
+
+
+
+    QObject::connect(&qnode, SIGNAL(JointStateUpdated(float, float, float)), this, SLOT(updateJointState(float, float, float)));
 
     /*********************
     ** Auto Start
@@ -83,6 +85,19 @@ void MainWindow::showNoMasterMessage() {
 void MainWindow::updateLoggingView() {
         ui.view_logging->scrollToBottom();
 }
+void MainWindow::updateJointState(float q0, float q1, float q2){
+  stringstream ss;
+  ss.precision(4);
+  ss.str(""); ss << q0 << "°";
+  string s=ss.str();
+  ui.lineEd_t1_ist->setText(QString::fromUtf8(s.c_str()));
+  ss.str(""); ss << q1 << "°";
+  s=ss.str();
+  ui.lineEd_t2_ist->setText(QString::fromUtf8(s.c_str()));
+  ss.str(""); ss << q2 << "°";
+   s=ss.str();
+  ui.lineEd_t3_ist->setText(QString::fromUtf8(s.c_str()));
+}
 
 /*****************************************************************************
 ** Implementation [Menu]
@@ -108,25 +123,24 @@ void MainWindow::on_resetButton_clicked()
     ui.Slider_Z->setValue(-284 * 10);
     showValues();
 }
-
 void MainWindow::on_Slider_X_valueChanged(int value)
 {
 
    showValues();
-   if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+   if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
 
 }
 void MainWindow::on_lineEd_X_returnPressed()
 {
   ui.Slider_X->setValue(ui.lineEd_X->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_Slider_Y_valueChanged(int value)
 {
 
     showValues();
-    if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+    if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
 
 
 }
@@ -134,24 +148,66 @@ void MainWindow::on_lineEd_Y_returnPressed()
 {
     ui.Slider_Y->setValue(ui.lineEd_Y->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_Slider_Z_valueChanged(int value)
 {
 
    showValues();
-   if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+   if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
 }
 void MainWindow::on_lineEd_Z_returnPressed()
 {
     ui.Slider_Z->setValue(ui.lineEd_Z->text().toFloat()*10);
   showValues();
-  if(ui.contsendCheck->isChecked()) goUncoordinatedLinear();
+  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
+}
+
+void MainWindow::on_houseButton_clicked()
+{
+  float vmax= ui.speedBox->text().toFloat();
+  float stepSize= ui.stepsizeEd->text().toFloat();
+  goHouse(vmax,stepSize);
+}
+void MainWindow::on_pushButton_clicked()
+{
+      qnode.sendDeltaCmd("TURNOFF");
+}
+void MainWindow::on_speedSlider_valueChanged(int value)
+{
+    stringstream ss;
+    ss << value;
+    ui.speedBox->setText(QString::fromStdString(ss.str()));
+}
+void MainWindow::on_speedBox_returnPressed()
+{
+    ui.speedSlider->setValue( ui.speedBox->text().toFloat());
+}
+void MainWindow::on_sendButton_clicked()
+{
+   float vmax= ui.speedBox->text().toFloat();
+   if(ui.radioCartCubic->isChecked() || ui.radioAngCubic->isChecked()){
+
+     float stepSize= ui.stepsizeEd->text().toFloat();
+     goCubic(vmax,stepSize);
+
+   }
+   else if (ui.radioLinear->isChecked()){
+     goCoordinatedLinear(vmax);
+   }
+
+}
+void MainWindow::on_resetTopButton_clicked()
+{
+  ui.Slider_X->setValue(0);
+  ui.Slider_Y->setValue(0);
+  ui.Slider_Z->setValue(-284 * 10);
+  showValues();
 }
 
 void MainWindow::showValues(){
-  std::vector<float> q(3,0);
-  std::vector<float> x(3,0);
+  vector<float> q(3,0);
+  vector<float> x(3,0);
   x[0] = (float)ui.Slider_X->value() / 10;
   x[1] = (float)ui.Slider_Y->value() / 10;
   x[2] = (float)ui.Slider_Z->value() / 10;
@@ -175,9 +231,9 @@ void MainWindow::showValues(){
     ui.label_workspace->setStyleSheet("color: red}");
   }
 
-  std::string s;
+  string s;
   bool status = kinematics.delta_calcInverse(x,q);
-  std::stringstream ss;
+  stringstream ss;
   ss << x[0];
   ui.lineEd_X->setText(QString::fromStdString(ss.str()));
   ss.str(""); ss << x[1];
@@ -196,17 +252,17 @@ void MainWindow::showValues(){
    s=ss.str();
   ui.lineEd_t3->setText(QString::fromUtf8(s.c_str()));
   ss.str(""); ss << status;
- // std::string s =ss.str();
+ // string s =ss.str();
   //ROS_INFO(s.c_str());
 }
 
 void MainWindow::goCoordinatedLinear(float v){
-  std::vector<float> q_goal(3,0);
-  std::vector<float> dq(3,90);
-  std::vector<float> x(3,0);
-  std::vector<float> q_start(3,0);
+  vector<float> q_goal(3,0);
+  vector<float> dq(3,90);
+  vector<float> x(3,0);
+  vector<float> q_start(3,0);
   float tmax = 0;
-  std::vector<float> dist(3,0);
+  vector<float> dist(3,0);
 
   x[0] = (float)ui.Slider_X->value() / 10;
   x[1]  = (float)ui.Slider_Y->value() / 10;
@@ -230,9 +286,9 @@ void MainWindow::goCoordinatedLinear(float v){
 }
 void MainWindow::goUncoordinatedLinear(){
 
-  std::vector<float> q_goal(3,0);
-  std::vector<float> dq(3,90);
-  std::vector<float> x(3,0);
+  vector<float> q_goal(3,0);
+  vector<float> dq(3,90);
+  vector<float> x(3,0);
 
   x[0] = (float)ui.Slider_X->value() / 10;
   x[1]  = (float)ui.Slider_Y->value() / 10;
@@ -244,52 +300,18 @@ void MainWindow::goUncoordinatedLinear(){
   qnode.sendDeltaAngle(q_goal,dq);
 
 }
-
-void MainWindow::on_sendButton_clicked()
-{
-   float vmax= ui.speedBox->text().toFloat();
-   if(ui.cubicCheck->isChecked()){
-
-     float stepSize= ui.stepsizeEd->text().toFloat();
-     goCubic(vmax,stepSize);
-
-   }
-   else{
-     goCoordinatedLinear(vmax);
-   }
-
-}
-
-
-void MainWindow::on_resetTopButton_clicked()
-{
-  ui.Slider_X->setValue(0);
-  ui.Slider_Y->setValue(0);
-  ui.Slider_Z->setValue(-284 * 10);
-  showValues();
-}
-
-void MainWindow::on_contsendCheck_clicked(bool checked)
-{
-    ui.sendButton->setEnabled(!checked);
-    ui.cubicCheck->setEnabled(!checked);
-    ui.cubicCheck->setChecked(false);
-    ui.cartesianCheck->setEnabled(!checked);
-    ui.cartesianCheck->setChecked(false);
-}
-
 void MainWindow::goCubic(float vmax,float stepSize){
-  std::string state = qnode.getDeltaInfo("GETSTATE");
+  string state = qnode.getDeltaInfo("GETSTATE");
 
   if(state.compare("WAITING")==0){
-    std::vector<float> q_end(3,0);
-    std::vector<float> q_start(3,0);
-    std::vector<float> q(3,0);
-    std::vector<float> dq(3,0);
-    std::vector<float> pos_start(3,0);
-    std::vector<float> pos_end(3,0);
-    std::vector<float> xi(3,0);
-    std::vector<float> dxi(3,0);
+    vector<float> q_end(3,0);
+    vector<float> q_start(3,0);
+    vector<float> q(3,0);
+    vector<float> dq(3,0);
+    vector<float> pos_start(3,0);
+    vector<float> pos_end(3,0);
+    vector<float> xi(3,0);
+    vector<float> dxi(3,0);
 
     float te = 0;
 
@@ -299,7 +321,7 @@ void MainWindow::goCubic(float vmax,float stepSize){
 
     qnode.getDeltaAngles("GETANGLES", q_start);
 
-    bool moveCart = ui.cartesianCheck->isChecked();
+    bool moveCart = ui.radioCartCubic->isChecked();
     kinematics.delta_calcInverse(pos_end,q_end);
     kinematics.delta_calcForward(q_start,pos_start);
     kinematics.rad2deg(q_end);
@@ -309,17 +331,10 @@ void MainWindow::goCubic(float vmax,float stepSize){
         tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
         if (tj > te) te = tj;
      }
-    std::stringstream ss;
-    ss.precision(4);
-    ss << te;
-    qnode.log(QNode::Info,ss.str());
-
     ros::Time endTime = ros::Time::now() + ros::Duration(te);
     ros::Time startTime = ros::Time::now();
     ros::Rate rate(1/stepSize);
-
-
-    std::vector<float> dq_end(3,0);
+    vector<float> dq_end(3,0);
 
     while(ros::ok() && ros::Time::now()<= endTime){
       ros::Duration tr = ros::Time::now() - startTime;
@@ -336,30 +351,33 @@ void MainWindow::goCubic(float vmax,float stepSize){
       }
 
       qnode.sendDeltaCart(xi);
-              dq[0]=40;
-            dq[1]=40;
-            dq[2]=40;
+      dq[0]=40;
+      dq[1]=40;
+      dq[2]=40;
       qnode.sendDeltaAngle(q,dq);
       ros::spinOnce();
+
+      qApp->processEvents();
+      if(ui.stopButton->isDown()) break;
+
       rate.sleep();
     }
   }
 }
-
 void MainWindow::goHouse(float vmax,float stepSize){
-  std::string state = qnode.getDeltaInfo("GETSTATE");
+  string state = qnode.getDeltaInfo("GETSTATE");
 
   if(state.compare("WAITING")==0){
-    std::vector<float> q_end(3,0);
-    std::vector<float> q_start(3,0);
-    std::vector<float> q(3,0);
-    std::vector<float> dq(3,0);
-    std::vector<float> pos_start(3,0);
-    std::vector<float> pos_end(3,0);
-    std::vector<float> xi(3,0);
-    std::vector<float> dxi(3,0);
-    std::vector< std::vector<float> > arr(10, std::vector<float>(3));
-
+    vector<float> q_end(3,0);
+    vector<float> q_start(3,0);
+    vector<float> q(3,0);
+    vector<float> dq(3,0);
+    vector<float> pos_start(3,0);
+    vector<float> pos_end(3,0);
+    vector<float> xi(3,0);
+    vector<float> dxi(3,0);
+    vector< vector<float> > arr(10, vector<float>(3));
+    stringstream ss;
 
     arr[0][0]=-30;
     arr[0][1]=-30;
@@ -407,10 +425,12 @@ void MainWindow::goHouse(float vmax,float stepSize){
           pos_end[0] = arr[p][0];
           pos_end[1] = arr[p][1];
           pos_end[2] = arr[p][2];
-
+          ss.str("");
+          ss << "Moving to x: "<<pos_end[0]<<", y: "<<pos_end[1]<<", z: "<<pos_end[2];
+          qnode.log(QNode::Info,ss.str());
           qnode.getDeltaAngles("GETANGLES", q_start);
 
-          bool moveCart = ui.cartesianCheck->isChecked();
+          bool moveCart = ui.radioCartCubic->isChecked();
           kinematics.delta_calcInverse(pos_end,q_end);
           kinematics.delta_calcForward(q_start,pos_start);
           kinematics.rad2deg(q_end);
@@ -425,7 +445,7 @@ void MainWindow::goHouse(float vmax,float stepSize){
           ros::Time startTime = ros::Time::now();
           ros::Rate rate(1/stepSize);
 
-          std::vector<float> dq_end(3,0);
+          vector<float> dq_end(3,0);
 
           while(ros::ok() && ros::Time::now()<= endTime){
             ros::Duration tr = ros::Time::now() - startTime;
@@ -447,47 +467,29 @@ void MainWindow::goHouse(float vmax,float stepSize){
             dq[2]=40;
             qnode.sendDeltaAngle(q,dq);
             ros::spinOnce();
+            qApp->processEvents();
+            if(ui.stopButton->isDown()){
+             //Beide schleifen verlassen
+             p=10;
+             break;
+             }
             rate.sleep();
           }
         }
+
+
      ros::Duration(0.5).sleep();
   }
 }
 
-void MainWindow::on_cubicCheck_clicked(bool checked)
-{
-        ui.contsendCheck->setEnabled(!checked);
-        ui.contsendCheck->setChecked(false);
+void MainWindow::stopMotion(){
+  qnode.sendDeltaCmd("STOPMOVE");
 }
-void MainWindow::on_cartesianCheck_clicked(bool checked)
+void MainWindow::on_stopButton_clicked()
 {
-  if(checked) ui.cubicCheck->setChecked(true);
-  ui.contsendCheck->setEnabled(!checked);
-  ui.contsendCheck->setChecked(false);
+   stopMotion();
 }
 
-void MainWindow::on_houseButton_clicked()
-{
-  float vmax= ui.speedBox->text().toFloat();
-  float stepSize= ui.stepsizeEd->text().toFloat();
-  goHouse(vmax,stepSize);
-}
-void MainWindow::on_pushButton_clicked()
-{
-      qnode.sendDeltaCmd("TURNOFF");
-}
-
-void MainWindow::on_speedSlider_valueChanged(int value)
-{
-    std::stringstream ss;
-    ss << value;
-    ui.speedBox->setText(QString::fromStdString(ss.str()));
-}
-
-void MainWindow::on_speedBox_returnPressed()
-{
-    ui.speedSlider->setValue( ui.speedBox->text().toFloat());
-}
 /*****************************************************************************
 ** Implementation [Configuration]
 *****************************************************************************/
@@ -518,6 +520,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
+
+
 
 
 

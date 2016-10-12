@@ -37,7 +37,7 @@ void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> 
   kinematics.delta_calcJointVel(x,dx,q,dq);
 
 }
-
+//##---WORKSPACE FUNCTIONS----##################################################
 int DeltaPlanner::readWorkSpace() {
   //Read Workspace values, given in csv files. Each file describes a convex polygon in the xy-pane
   char buffer[32] = { 0 };

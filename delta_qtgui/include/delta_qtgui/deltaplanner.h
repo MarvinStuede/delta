@@ -23,7 +23,7 @@ public:
   int pointInPolygon(int nvert, float *vertx, float *verty, float testx, float testy);
   int giveBoundedPoint(float &x_prop, float &y_prop, float &z_prop);
   int calcPointOnPolygon(int nvert, float *vertx, float *verty, float testx, float testy,float &lpointx,float &lpointy);
-
+  void rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vector<float> &q, double theta,const Eigen::Vector3d &r);
 private:
   Kinematics kinematics;
 

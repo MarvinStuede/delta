@@ -18,6 +18,7 @@
 #include "Kinematics.h"
 #include "deltaplanner.h"
 #include <vector>
+#include <eigen3/Eigen/Dense>
 
 /*****************************************************************************
 ** Namespace
@@ -48,6 +49,7 @@ public:
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float vmax,float stepSize);
   void goHouse(float vmax,float stepSize);
+  bool goCircular(float vmax,float stepSize);
 
 
 public Q_SLOTS:
@@ -75,12 +77,17 @@ public Q_SLOTS:
   void on_speedBox_returnPressed();
   void stopMotion();
   void on_stopButton_clicked();
+  void on_gripopenButton_clicked();
+  void on_gripcloseButton_clicked();
+  void on_led_radius_returnPressed();
 
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
     void updateJointState(float q0, float q1, float q2);
+
+
 
 
 private:

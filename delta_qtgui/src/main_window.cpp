@@ -186,14 +186,15 @@ void MainWindow::on_speedBox_returnPressed()
 void MainWindow::on_sendButton_clicked()
 {
    float vmax= ui.speedBox->text().toFloat();
+   float stepSize= ui.stepsizeEd->text().toFloat();
    if(ui.radioCartCubic->isChecked() || ui.radioAngCubic->isChecked()){
-
-     float stepSize= ui.stepsizeEd->text().toFloat();
      goCubic(vmax,stepSize);
-
    }
    else if (ui.radioLinear->isChecked()){
      goCoordinatedLinear(vmax);
+   }
+   else if(ui.radioCircular->isChecked()){
+     goCircular(vmax,stepSize);
    }
 
 }
@@ -252,8 +253,35 @@ void MainWindow::showValues(){
    s=ss.str();
   ui.lineEd_t3->setText(QString::fromUtf8(s.c_str()));
   ss.str(""); ss << status;
- // string s =ss.str();
-  //ROS_INFO(s.c_str());
+
+
+  //##CIRCLE###################
+  float r =  ui.led_radius->text().toFloat();
+
+  ui.led_CP1_X->setText(ui.lineEd_X->text());
+  ui.led_CP1_Y->setText(ui.lineEd_Y->text());
+  ui.led_CP1_Z->setText(ui.lineEd_Z->text());
+
+  ss.str("");
+  ss<<ui.lineEd_X->text().toFloat();
+  ui.led_CP2_X->setText(QString::fromStdString(ss.str()));
+  ss.str("");
+  ss<<ui.lineEd_Y->text().toFloat() - 2 * r;
+  ui.led_CP2_Y->setText(QString::fromStdString(ss.str()));
+  ss.str("");
+  ss<<ui.lineEd_Z->text().toFloat();
+  ui.led_CP2_Z->setText(QString::fromStdString(ss.str()));
+
+  ss.str("");
+  ss<<ui.lineEd_X->text().toFloat() + r;
+  ui.led_CP3_X->setText(QString::fromStdString(ss.str()));
+  ss.str("");
+  ss<<ui.lineEd_Y->text().toFloat() - r;
+  ui.led_CP3_Y->setText(QString::fromStdString(ss.str()));
+  ss.str("");
+  ss<<ui.lineEd_Z->text().toFloat();
+  ui.led_CP3_Z->setText(QString::fromStdString(ss.str()));
+
 }
 
 void MainWindow::goCoordinatedLinear(float v){
@@ -364,6 +392,85 @@ void MainWindow::goCubic(float vmax,float stepSize){
     }
   }
 }
+
+bool MainWindow::goCircular(float vmax, float stepSize){
+
+  vector<float> q_start(3,0);
+  vector<float> pos_start(3,0);
+  vector<float> dq(3,0);
+  vector<float> q(3,0);
+  string state = qnode.getDeltaInfo("GETSTATE");
+
+  if(state.compare("WAITING")==0){
+    qnode.getDeltaAngles("GETANGLES", q_start);
+    kinematics.delta_calcForward(q_start,pos_start);
+
+    using namespace Eigen;
+
+    Vector3d p1(ui.led_CP1_X->text().toFloat(),ui.led_CP1_Y->text().toFloat(),ui.led_CP1_Z->text().toFloat());
+    Vector3d p2(ui.led_CP2_X->text().toFloat(),ui.led_CP2_Y->text().toFloat(),ui.led_CP2_Z->text().toFloat());
+    Vector3d p3(ui.led_CP3_X->text().toFloat(),ui.led_CP3_Y->text().toFloat(),ui.led_CP3_Z->text().toFloat());
+
+    // triangle "edges"
+    const Vector3d t = p2-p1;
+    const Vector3d u = p3-p1;
+    const Vector3d v = p3-p2;
+
+    // triangle normal
+    const Vector3d w = t.cross(u);
+    const double wsl = w.squaredNorm();
+    if (wsl<10e-14) return false;
+
+    // helpers
+    const double iwsl2 = 1.0 / (2.0*wsl);
+    const double tt = t.adjoint()*t;
+    const double uu = u.adjoint()*u;
+    const double vv = v.adjoint()*v;
+
+    // result circle
+    Vector3d circCenter = p1 + (u*tt*(u.adjoint()*v) - t*uu*(t.adjoint()*v)) * iwsl2;
+    double   circRadius = sqrt(tt * uu * vv * iwsl2*0.5);
+    Vector3d circAxis   = w/w.norm();
+    stringstream ss;
+    ss << "Circle center x: "<<circCenter[0]<<", y: "<<circCenter[1]<<", z: "<<circCenter[2];
+    qnode.log(QNode::Info,ss.str());
+    ss.str("");
+    ss << "Radius: "<<circRadius;
+    qnode.log(QNode::Info,ss.str());
+
+    vector<float> pos_i(3,0);
+
+    double theta = 360 * M_PI/180;
+    double te = 3;
+    ros::Time endTime = ros::Time::now() + ros::Duration(te);
+    ros::Time startTime = ros::Time::now();
+    ros::Rate rate(1/stepSize);
+    vector<float> xi(3,0);
+
+    while(ros::ok() && ros::Time::now()<= endTime){
+      ros::Duration tr = ros::Time::now() - startTime;
+      double t = tr.toSec();
+
+      deltaplanner.rotatePointAroundCircleAxis(p1-circCenter ,pos_i,t/te*theta,circAxis);
+      for(int i=0;i<3;i++) xi[i]= pos_i[i] + circCenter[i];
+      qnode.sendDeltaCart(xi);
+      dq[0]=40;
+      dq[1]=40;
+      dq[2]=40;
+
+      kinematics.delta_calcInverse(xi,q);
+      kinematics.rad2deg(q);
+      qnode.sendDeltaAngle(q,dq);
+      ros::spinOnce();
+      qApp->processEvents();
+      if(ui.stopButton->isDown()) break;
+
+      rate.sleep();
+    }
+
+  }
+}
+
 void MainWindow::goHouse(float vmax,float stepSize){
   string state = qnode.getDeltaInfo("GETSTATE");
 
@@ -489,6 +596,19 @@ void MainWindow::on_stopButton_clicked()
 {
    stopMotion();
 }
+void MainWindow::on_gripopenButton_clicked()
+{
+  qnode.sendDeltaCmd("GRIPPEROPEN");
+}
+
+void MainWindow::on_gripcloseButton_clicked()
+{
+  qnode.sendDeltaCmd("GRIPPERCLOSE");
+}
+void MainWindow::on_led_radius_returnPressed()
+{
+    showValues();
+}
 
 /*****************************************************************************
 ** Implementation [Configuration]
@@ -520,9 +640,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
-
-
-
 
 
 

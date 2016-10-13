@@ -8,6 +8,7 @@
 #include <Arduino.h>
 #include <AccelStepper.h>
 #include <MultiStepper.h>
+#include <Servo.h>
 
 #define TRUE                1
 #define FALSE               0
@@ -24,6 +25,7 @@
 #define C_DIR_PIN          	28
 #define C_ENABLE_PIN        24
 #define C_END_PIN 	        18
+#define SERVO_A             4
 
 #define EE_RADIUS           30
 #define BICEPS              100
@@ -64,6 +66,7 @@ AccelStepper 	a_stepper(AccelStepper::DRIVER, A_STEP_PIN, A_DIR_PIN);
 AccelStepper 	b_stepper(AccelStepper::DRIVER, B_STEP_PIN, B_DIR_PIN);
 AccelStepper 	c_stepper(AccelStepper::DRIVER, C_STEP_PIN, C_DIR_PIN);
 MultiStepper  steppers;
+Servo Servo_A;
 
 void setState(state new_state){
   oldstate_=state_;
@@ -214,6 +217,12 @@ void commandHandler(const std_msgs::String& cmdString){
      c_stepper.stop();
      setState(STATE_WAITING);
   }
+  else if(command.equals("GRIPPEROPEN")){
+    Servo_A.write(168);
+  }
+  else if(command.equals("GRIPPERCLOSE")){
+    Servo_A.write(1);
+  }
   else{
     nh.logerror("delta/command not valid!");
   }
@@ -292,6 +301,7 @@ void stateLoop()
             setStdValues(&a_stepper);
             setStdValues(&b_stepper);
             setStdValues(&c_stepper);
+            Servo_A.write(1);
             nh.loginfo("STATE 'INIT': Change to STATE 'RESET'");
           }
           break;
@@ -442,6 +452,9 @@ void setup() {
   initialize(&a_stepper, A_ENABLE_PIN, A_END_PIN);
   initialize(&b_stepper, B_ENABLE_PIN, B_END_PIN);
   initialize(&c_stepper, C_ENABLE_PIN, C_END_PIN);
+
+  Servo_A.attach(SERVO_A);
+   Servo_A.write(1);
 
   nh.loginfo("All Motors initialized");
 

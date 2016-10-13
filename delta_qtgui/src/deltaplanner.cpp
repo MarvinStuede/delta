@@ -37,6 +37,28 @@ void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> 
   kinematics.delta_calcJointVel(x,dx,q,dq);
 
 }
+
+void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vector<float> &q, double theta,const Eigen::Vector3d &r)
+{
+
+   double costheta,sintheta;
+
+   costheta = cos(theta);
+   sintheta = sin(theta);
+
+   q[0] = (costheta + (1 - costheta) * r[0] * r[0]) * p[0];
+   q[0] += ((1 - costheta) * r[0] * r[1] - r[2] * sintheta) * p[1];
+   q[0] += ((1 - costheta) * r[0] * r[2] + r[1] * sintheta) * p[2];
+
+   q[1] = ((1 - costheta) * r[0] * r[1] + r[2] * sintheta) * p[0];
+   q[1] += (costheta + (1 - costheta) * r[1] * r[1]) * p[1];
+   q[1] += ((1 - costheta) * r[1] * r[2] - r[0] * sintheta) * p[2];
+
+   q[2] = ((1 - costheta) * r[0] * r[2] - r[1] * sintheta) * p[0];
+   q[2] += ((1 - costheta) * r[1] * r[2] + r[0] * sintheta) * p[1];
+   q[2] += (costheta + (1 - costheta) * r[2] * r[2]) * p[2];
+
+}
 //##---WORKSPACE FUNCTIONS----##################################################
 int DeltaPlanner::readWorkSpace() {
   //Read Workspace values, given in csv files. Each file describes a convex polygon in the xy-pane

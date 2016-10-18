@@ -26,6 +26,8 @@
 #define C_ENABLE_PIN        24
 #define C_END_PIN 	        18
 #define SERVO_A             4
+#define GRIP_OPEN           184
+#define GRIP_CLOSE          5
 
 #define EE_RADIUS           30
 #define BICEPS              100
@@ -69,7 +71,7 @@ MultiStepper  steppers;
 Servo Servo_A;
 
 void setState(state new_state){
-  oldstate_=state_;
+  oldstate_ = state_;
   state_ = new_state;
 }
 
@@ -86,7 +88,7 @@ void initialize(AccelStepper *stepper, int enable, int end) {
 }
 void setStdValues(AccelStepper *stepper){
   stepper->setMaxSpeed(stepsCircle/3);
-  stepper->setSpeed(stepsCircle*factor*0.9);
+  stepper->setSpeed(stepsCircle/8);
   stepper->setAcceleration(20000);
 }
 
@@ -218,10 +220,10 @@ void commandHandler(const std_msgs::String& cmdString){
      setState(STATE_WAITING);
   }
   else if(command.equals("GRIPPEROPEN")){
-    Servo_A.write(168);
+    Servo_A.write(GRIP_OPEN);
   }
   else if(command.equals("GRIPPERCLOSE")){
-    Servo_A.write(1);
+    Servo_A.write(GRIP_CLOSE);
   }
   else{
     nh.logerror("delta/command not valid!");
@@ -296,12 +298,8 @@ void stateLoop()
       case STATE_INIT:
       {
           if(enable){
-            oldstate_= state_;
-            state_ = STATE_RESET;
-            setStdValues(&a_stepper);
-            setStdValues(&b_stepper);
-            setStdValues(&c_stepper);
-            Servo_A.write(1);
+            setState(STATE_RESET);
+            Servo_A.write(GRIP_CLOSE);
             nh.loginfo("STATE 'INIT': Change to STATE 'RESET'");
           }
           break;
@@ -310,29 +308,38 @@ void stateLoop()
       {
 
           if (oldstate_ == STATE_INIT){
-            nh.loginfo("STATE 'RESET': Drive Motors to endstops");
+            nh.loginfo("STATE 'RESET': Starting, driving Motors to endstops");
+
+            //Delay zu starke Schwingungen beim losfahren zu vermeiden
+            delay(200);
+            a_stepper.setSpeed(stepsCircle/10);
+            b_stepper.setSpeed(stepsCircle/20);
+            c_stepper.setSpeed(stepsCircle/20);
+            //Niedrige Beschleunigung (Schwingungsreduktion damit Motoren nicht überlasten)
+            a_stepper.setAcceleration(3000);
+            b_stepper.setAcceleration(3000);
+            c_stepper.setAcceleration(3000);
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
-            a_stepper.setSpeed(stepsCircle/10);
-            b_stepper.setSpeed(stepsCircle/15);
-            c_stepper.setSpeed(stepsCircle/15);
+
             oldstate_ = state_;
           }
           else if (oldstate_ != state_){
             nh.loginfo("STATE 'RESET': Drive Motors to endstops");
-            a_stepper.move(130*stepsCircle/360);
-            b_stepper.move(130*stepsCircle/360);
-            c_stepper.move(130*stepsCircle/360);
             a_stepper.setSpeed(stepsCircle/10);
             b_stepper.setSpeed(stepsCircle/10);
             c_stepper.setSpeed(stepsCircle/10);
+            a_stepper.move(130*stepsCircle/360);
+            b_stepper.move(130*stepsCircle/360);
+            c_stepper.move(130*stepsCircle/360);
             oldstate_ = state_;
           }
           if (a_stepper.distanceToGo() == 0 && b_stepper.distanceToGo() == 0 && c_stepper.distanceToGo() == 0){
 
             if(!set_reset){
-                set_reset = true;
+              //Wenn alle Kniehebel an Endschaltern
+                set_reset = true; //Variable gibt aktiven Resetvorgang (zurückfahren) an
                 nh.loginfo("STATE 'RESET': Move Motors back");
                 a_stepper.setCurrentPosition(0);
                 b_stepper.setCurrentPosition(0);
@@ -340,14 +347,19 @@ void stateLoop()
                 a_stepper.move(-11*stepsCircle/360);
                 b_stepper.move(-11*stepsCircle/360);
                 c_stepper.move(-11*stepsCircle/360);
-                a_stepper.setSpeed(stepsCircle/4);
-                b_stepper.setSpeed(stepsCircle/4);
-                c_stepper.setSpeed(stepsCircle/4);
+                a_stepper.setSpeed(stepsCircle/10);
+                b_stepper.setSpeed(stepsCircle/10);
+                c_stepper.setSpeed(stepsCircle/10);
+
             }
             else{
+              //Wenn alle Kniehebel auf 0 Grad bewegt
                 a_stepper.setCurrentPosition(0);
                 b_stepper.setCurrentPosition(0);
                 c_stepper.setCurrentPosition(0);
+                setStdValues(&a_stepper);
+                setStdValues(&b_stepper);
+                setStdValues(&c_stepper);
 
                 set_reset = false;
                 setState(STATE_WAITING);
@@ -386,6 +398,7 @@ void stateLoop()
         }
         case STATE_DISABLING:
         {
+      //Zustand zum ausschalten, zurückfahren an Home Position
           long positions[3];
 
           if (oldstate_ != state_&& enable){
@@ -398,12 +411,13 @@ void stateLoop()
             a_stepper.setMaxSpeed(stepsCircle/13);
             b_stepper.setMaxSpeed(stepsCircle/13);
             c_stepper.setMaxSpeed(stepsCircle/13);
-
+            //Synchronisierte Multistepperbewegung
             steppers.moveTo(positions);
+            //Funktioniert blockiert, beim zurückfahren kein eingreifen zugelassen (Endstopüberprüfung hinzufügen!)
             steppers.runSpeedToPosition();
-
+            //Einmal spinnen, damit ROS nicht meckert
             nh.spinOnce();
-
+            //Linear zu Home fahren
             positions[0]=-45 * stepsCircle/360;
             positions[1]=3 * stepsCircle/360;
             positions[2]=3 * stepsCircle/360;
@@ -452,11 +466,11 @@ void setup() {
   initialize(&a_stepper, A_ENABLE_PIN, A_END_PIN);
   initialize(&b_stepper, B_ENABLE_PIN, B_END_PIN);
   initialize(&c_stepper, C_ENABLE_PIN, C_END_PIN);
-
+  //Greifer
   Servo_A.attach(SERVO_A);
-   Servo_A.write(1);
+  Servo_A.write(GRIP_CLOSE);
 
-  nh.loginfo("All Motors initialized");
+  nh.loginfo("Motors and Gripper initialized");
 
   //Deactivate motors at startup
   stopCtrl();
@@ -472,9 +486,16 @@ void loop() {
   stateLoop();
   checkEndstops();
   if(enable){
+    if(state_ == STATE_RESET){
+     a_stepper.run();
+     b_stepper.run();
+     c_stepper.run();
+    }
+    else{
      a_stepper.runSpeedToPosition();
      b_stepper.runSpeedToPosition();
      c_stepper.runSpeedToPosition();
+    }
 
   }
 }

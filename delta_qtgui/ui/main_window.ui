@@ -849,7 +849,7 @@
            <x>30</x>
            <y>70</y>
            <width>311</width>
-           <height>128</height>
+           <height>151</height>
           </rect>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -1018,8 +1018,8 @@
         <widget class="QWidget" name="gridLayoutWidget_2">
          <property name="geometry">
           <rect>
-           <x>90</x>
-           <y>210</y>
+           <x>30</x>
+           <y>220</y>
            <width>301</width>
            <height>100</height>
           </rect>
@@ -1111,8 +1111,8 @@
         <widget class="QLineEdit" name="led_radius">
          <property name="geometry">
           <rect>
-           <x>430</x>
-           <y>270</y>
+           <x>360</x>
+           <y>250</y>
            <width>113</width>
            <height>22</height>
           </rect>
@@ -1124,8 +1124,8 @@
         <widget class="QLabel" name="label_14">
          <property name="geometry">
           <rect>
-           <x>430</x>
-           <y>250</y>
+           <x>360</x>
+           <y>230</y>
            <width>59</width>
            <height>14</height>
           </rect>
@@ -1137,18 +1137,18 @@
         <widget class="QLabel" name="label_workspace_circle">
          <property name="geometry">
           <rect>
-           <x>70</x>
-           <y>320</y>
-           <width>391</width>
-           <height>22</height>
+           <x>350</x>
+           <y>270</y>
+           <width>201</width>
+           <height>31</height>
           </rect>
          </property>
          <property name="font">
           <font>
-           <pointsize>14</pointsize>
-           <weight>75</weight>
+           <pointsize>11</pointsize>
+           <weight>50</weight>
            <italic>false</italic>
-           <bold>true</bold>
+           <bold>false</bold>
            <underline>false</underline>
            <strikeout>false</strikeout>
           </font>

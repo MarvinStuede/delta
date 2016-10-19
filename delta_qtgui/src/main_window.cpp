@@ -285,7 +285,8 @@ void MainWindow::showValues(){
   ss.str("");
   ss<<ui.lineEd_Z->text().toFloat();
   ui.led_CP3_Z->setText(QString::fromStdString(ss.str()));
- /* using namespace Eigen;
+
+  using namespace Eigen;
   Vector3d circCenter;
   Vector3d circAxis;
   double circRadius;
@@ -296,11 +297,18 @@ void MainWindow::showValues(){
   if(deltaplanner.circleInWorkspace(circCenter,circAxis,circRadius)){
     ui.label_workspace_circle->setText("Circle in Workspace");
     ui.label_workspace_circle->setStyleSheet("QLabel {color : green}");
+    ui.sendButton->setEnabled(true);
   }
   else{
        ui.label_workspace_circle->setText("Circle not in Workspace");
-       ui.label_workspace_circle->setStyleSheet("QLabel {color : #fca016}");// orange
-  }*/
+       ui.label_workspace_circle->setStyleSheet("QLabel {color : red}");
+       ui.sendButton->setEnabled(false);
+  }
+
+  if(!ui.radioCircular->isChecked()){
+      ui.sendButton->setEnabled(true);
+  }
+
 }
 
 void MainWindow::goCoordinatedLinear(float v){
@@ -621,6 +629,30 @@ void MainWindow::on_led_radius_returnPressed()
 {
     showValues();
 }
+void MainWindow::on_radioCircular_clicked()
+{
+    showValues();
+}
+
+void MainWindow::on_radioCartCubic_clicked()
+{
+    showValues();
+}
+
+void MainWindow::on_radioAngCubic_clicked()
+{
+    showValues();
+}
+
+void MainWindow::on_radioLinear_clicked()
+{
+    showValues();
+}
+
+void MainWindow::on_radioContinuous_clicked()
+{
+    showValues();
+}
 
 /*****************************************************************************
 ** Implementation [Configuration]
@@ -652,10 +684,4 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
-
-
-
-
-
-
 

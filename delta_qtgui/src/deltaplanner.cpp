@@ -12,26 +12,13 @@ void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_
 //Berechnet Gelenkwinkel mittels kubischer Interpolation
 //Da PTP Bewegung ist die Bewegung nicht geradlinig
   for(int i=0;i<3;i++){
-    /*float a0 = q_start[i];
-    float a2 = dq_end[i]/(2*te) - 3*(q_start[i]+ (dq_end[i] * te)/(2) - q_end[i])/(te*te);
-    float a3 = (2*(q_start[i] + (dq_end[i]*te)/(2) - q_end[i]))/(te * te *te);
-
-    q[i] = a0 + a2*t*t + a3*t*t*t;
-    dq[i] = 2*a2*t + 3*a3*t*t;
-    //float qdd = 2*a2 + 6*a3*t;*/
     calcCubicPoint(te,t,q_start[i],q_end[i],q[i],dq[i]);
   }
 }
 void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> & pos_start, const std::vector<float> & pos_end, std::vector<float> &x, std::vector<float> &dx, std::vector<float> &q,std::vector<float> &dq){
  //Berechnet Gelenkwinkel auf kubisch interpolierter PTP-Bahn im kartesischen (notwendig für echte Linearbewegungen)
-  //float a0, a2, a3;
-  //float ve=0;
+
   for (int i=0;i<3;i++){
-  /*  a0 = pos_start[i];
-    a2 = ve/(2*te) - 3*(pos_start[i]+ (ve * te)/(2) - pos_end[i])/(te*te);
-    a3 = (2*(pos_start[i] + (ve*te)/(2) - pos_end[i]))/(te * te *te);
-    x[i] = a0 + a2*t*t + a3*t*t*t;
-    dx[i] = 2*a2*t + 3*a3*t*t;*/
     calcCubicPoint(te,t,pos_start[i],pos_end[i],x[i],dx[i]);
   }
 
@@ -39,7 +26,6 @@ void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> 
   kinematics.delta_calcJointVel(x,dx,q,dq);
 
 }
-
 
 void DeltaPlanner::calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Eigen::Vector3d &p2,const Eigen::Vector3d &p3,Eigen::Vector3d &circCenter,Eigen::Vector3d &circAxis,double &circRadius){
   //Berechne Kreis anhand dreier Punkte, die auf dem Kreis liegen
@@ -69,25 +55,26 @@ bool DeltaPlanner::circleInWorkspace(const Vector3d &circCenter, const Vector3d 
 {
   //Überprüfen ob ausgewählter Kreis komplett im Arbeitsraum liegt
   float theta_i = 0;
-  vector<float> pos_i;
+  vector<float> pos_i(3,0);
   Vector3d cao_helper(4.0+circAxis[0], 4.0+circAxis[0]+circAxis[1], 4.0+circAxis[0]+circAxis[1]+circAxis[2]);
   //Orthogonaler Vektor zu Kreisachse
   Vector3d cao = cao_helper.cross(circAxis);
   cao = cao/cao.norm();
   //Punkt auf Kreis
   Vector3d cp = circCenter + cao*circRadius;
-  while(theta_i <= 2*M_PI){
+ while(theta_i <= 2*M_PI){
 
 
     rotatePointAroundCircleAxis(cp ,pos_i,theta_i,circAxis);
     if(giveBoundedPoint(pos_i[0],pos_i[1],pos_i[2]) == 2) return false;
+    //100 verschiedene Winkel überprüfen
     theta_i += 2*M_PI/100;
   }
   return true;
 }
 
 void DeltaPlanner::calcCubicPoint(float te, float t_i, float p_start, float p_end, float &p_i, float &v_i){
-  //Punkt auf kartesischem Polynom berechnen
+  //Punkt auf kubischem Polynom berechnen
    float a0, a2, a3;
    a0 = p_start;
    a2 = -3*(p_start- p_end)/(te*te);
@@ -98,6 +85,7 @@ void DeltaPlanner::calcCubicPoint(float te, float t_i, float p_start, float p_en
 
 void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vector<float> &q, double theta,const Eigen::Vector3d &r)
 {
+  //Punkt p um Winkel theta um Achse r rotieren, ergibt q
 
    double costheta,sintheta;
 

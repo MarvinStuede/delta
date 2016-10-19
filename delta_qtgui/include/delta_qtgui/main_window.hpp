@@ -80,15 +80,17 @@ public Q_SLOTS:
   void on_gripopenButton_clicked();
   void on_gripcloseButton_clicked();
   void on_led_radius_returnPressed();
+  void on_radioCircular_clicked();
+  void on_radioCartCubic_clicked();
+  void on_radioAngCubic_clicked();
+  void on_radioLinear_clicked();
+  void on_radioContinuous_clicked();
 
     /******************************************
     ** Manual connections
     *******************************************/
     void updateLoggingView(); // no idea why this can't connect automatically
     void updateJointState(float q0, float q1, float q2);
-
-
-
 
 private:
 	Ui::MainWindowDesign ui;

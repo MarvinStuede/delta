@@ -188,7 +188,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="homeButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -848,7 +848,7 @@
           <rect>
            <x>30</x>
            <y>70</y>
-           <width>311</width>
+           <width>314</width>
            <height>151</height>
           </rect>
          </property>
@@ -869,16 +869,6 @@
              <widget class="QRadioButton" name="radioLinear">
               <property name="text">
                <string>Linear </string>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup</string>
-              </attribute>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="radioAngCubic">
-              <property name="text">
-               <string>Cubic Spline (angular PTP)</string>
               </property>
               <attribute name="buttonGroup">
                <string notr="true">buttonGroup</string>
@@ -1018,10 +1008,10 @@
         <widget class="QWidget" name="gridLayoutWidget_2">
          <property name="geometry">
           <rect>
-           <x>30</x>
-           <y>220</y>
-           <width>301</width>
-           <height>100</height>
+           <x>40</x>
+           <y>240</y>
+           <width>261</width>
+           <height>101</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
@@ -1094,71 +1084,90 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="led_CP3_Y"/>
+          </item>
           <item row="2" column="3">
            <widget class="QLineEdit" name="led_CP2_Z"/>
           </item>
           <item row="3" column="1">
            <widget class="QLineEdit" name="led_CP3_X"/>
           </item>
-          <item row="3" column="2">
-           <widget class="QLineEdit" name="led_CP3_Y"/>
-          </item>
           <item row="3" column="3">
            <widget class="QLineEdit" name="led_CP3_Z"/>
           </item>
          </layout>
         </widget>
-        <widget class="QLineEdit" name="led_radius">
+        <widget class="QWidget" name="layoutWidget">
          <property name="geometry">
           <rect>
-           <x>360</x>
-           <y>250</y>
-           <width>113</width>
-           <height>22</height>
+           <x>320</x>
+           <y>240</y>
+           <width>191</width>
+           <height>50</height>
           </rect>
          </property>
-         <property name="text">
-          <string>25</string>
-         </property>
-        </widget>
-        <widget class="QLabel" name="label_14">
-         <property name="geometry">
-          <rect>
-           <x>360</x>
-           <y>230</y>
-           <width>59</width>
-           <height>14</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Radius</string>
-         </property>
-        </widget>
-        <widget class="QLabel" name="label_workspace_circle">
-         <property name="geometry">
-          <rect>
-           <x>350</x>
-           <y>270</y>
-           <width>201</width>
-           <height>31</height>
-          </rect>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>11</pointsize>
-           <weight>50</weight>
-           <italic>false</italic>
-           <bold>false</bold>
-           <underline>false</underline>
-           <strikeout>false</strikeout>
-          </font>
-         </property>
-         <property name="text">
-          <string>Circle in Workspace</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QLabel" name="label_14">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Radius</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="led_radius">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>40</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>25</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_workspace_circle">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+              <underline>false</underline>
+              <strikeout>false</strikeout>
+             </font>
+            </property>
+            <property name="text">
+             <string>Circle in Workspace</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </widget>
       </item>

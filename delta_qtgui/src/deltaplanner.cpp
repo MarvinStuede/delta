@@ -1,13 +1,195 @@
-#include "deltaplanner.h"
+#include "deltaplanner.hpp"
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <QApplication>
 
-DeltaPlanner::DeltaPlanner():kinematics(32,80,295,100)
+DeltaPlanner::DeltaPlanner(delta_qtgui::QNode &qnode)
+  :kinematics(32,80,295,100)
 {
+    //Pointer auf Node zur Kommunikation mit dem Delta
+  qn = &qnode;
+  movFlag = false;
 
 }
+
+DeltaPlanner::~DeltaPlanner()
+{
+  Q_EMIT finished();
+}
+using namespace delta_qtgui;
 using namespace Eigen;
 using namespace std;
+
+//##########  MOTION FUNCTIONS   ##################################
+void DeltaPlanner::setFlag(const bool en){
+   movFlag = en;
+}
+
+int DeltaPlanner::moveCircular(vector<vector<float> > &circlePoints, float angle, float vmax, float stepSize){
+    //Fahre Kreis bestehend aus drei Punkten
+    vector<float> q_start(3,0);
+    vector<float> pos_start(3,0);
+    vector<float> dq(3,0);
+    vector<float> q(3,0);
+    Vector3d p1(circlePoints[0][0],circlePoints[0][1],circlePoints[0][2]);
+    Vector3d p2(circlePoints[1][0],circlePoints[1][1],circlePoints[1][2]);
+    Vector3d p3(circlePoints[2][0],circlePoints[2][1],circlePoints[2][2]);
+    //Kreismittelpunkt, -achse und -radius definieren
+    Vector3d circCenter;
+    Vector3d circAxis;
+    double circRadius;
+    //Kreis berechnen
+    calcCircleFromThreePoints(p1,p2,p3,circCenter,circAxis,circRadius);
+
+    //Punkt auf Kreis in aktueller Iteration
+    vector<float> pos_i(3,0);
+
+    //Winkel der gefahren werden soll
+    float theta_end = angle * M_PI/180;
+    float theta_i = 0;
+    float dtheta_i = 0;
+
+    //Gesamtdauer für Kreisfahrt
+    float te = fabs(1.5*theta_end*circRadius/vmax);
+
+    qn->getDeltaAngles("GETANGLES", q_start);
+    kinematics.delta_calcForward(q_start,pos_start);
+
+    ros::Time endTime = ros::Time::now() + ros::Duration(te);
+    ros::Time startTime = ros::Time::now();
+    ros::Rate rate(1/stepSize);
+    vector<float> xi(3,0);
+    movFlag = true;
+
+    while(ros::ok() && ros::Time::now()<= endTime && movFlag){
+      ros::Duration tr = ros::Time::now() - startTime;
+      double t = tr.toSec();
+      //Gebe Punkt auf Kreis an bestimmtem Winkel zurück (Im Kreiskoord.-system)
+      calcCubicPoint(te,t,0,theta_end,theta_i,dtheta_i);
+
+      rotatePointAroundCircleAxis(p1 - circCenter ,pos_i,theta_i,circAxis);
+      //In Taskspace transformieren
+      for(int i=0;i<3;i++) xi[i]= pos_i[i] + circCenter[i];
+
+      qn->sendDeltaCart(xi);
+      dq[0]=40;
+      dq[1]=40;
+      dq[2]=40;
+
+      kinematics.delta_calcInverse(xi,q);
+      kinematics.rad2deg(q);
+      qn->sendDeltaAngle(q,dq);
+      ros::spinOnce();
+      qApp->processEvents();
+
+      rate.sleep();
+    }
+    movFlag = false;
+}
+int DeltaPlanner::movePTP(const InterpolationMode &imode, vector<float> &pos_end, float vmax, float stepSize){
+
+    //Goal/Start
+    vector<float> q_end(3,0);
+    vector<float> q_start(3,0);
+    vector<float> pos_start(3,0);
+
+    //Current Point/Velocity
+    vector<float> q_i(3,0);
+    vector<float> dq_i(3,40);
+    vector<float> x_i(3,0);
+    vector<float> dx_i(3,0);
+
+   float te = 0;
+
+    //Aktuelle Winkel in Jointkoordinaten auslesen und EE Pos. berechnen
+   qn->getDeltaAngles("GETANGLES", q_start);
+   kinematics.delta_calcForward(q_start,pos_start);
+
+   //Endpunkt in Jointkoordinaten berechnen
+   kinematics.delta_calcInverse(pos_end,q_end);
+   kinematics.rad2deg(q_end);
+
+   switch(imode){
+   //--------------  DIREKT --------------------
+   case NONE:{
+     //Zielposition direkt an Roboter senden (Motoren fahren zu Zielwinkel mit selber Geschwindigkeit)
+     qn->sendDeltaCart(pos_end);
+     qn->sendDeltaAngle(q_end,dq_i);
+     break;
+   }
+   //--------------  LINEAR --------------------
+   case LINEAR:{
+    //Synchronisierte Linearbewegung mit konstanter Geschwindigkeit
+     vector<float> dist(3,0);
+     for(int i = 0;i<3;i++){
+         dist[i]=fabs(q_end[i] - q_start[i]);
+
+         if (dist[i] / vmax > te) te = dist[i]/vmax;
+     }
+
+     dq_i[0]=dist[0]/te;
+     dq_i[1]=dist[1]/te;
+     dq_i[2]=dist[2]/te;
+     qn->sendDeltaCart(pos_end);
+     qn->sendDeltaAngle(q_end,dq_i);
+     break;
+
+   }
+   //--------------  KUBISCH --------------------
+   case CUBICCART:{
+
+     //Bei kubischer Bewegung Dauer anhand max. Geschw. berechnen
+     float tj = 0;
+     for(int j=0;j<3;j++){
+       //Dauer für Bewegung anhand Max. Geschwindigkeit
+       //vmax erreicht bei te/2
+         tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
+         if (tj > te) te = tj;
+      }
+
+     ros::Time endTime = ros::Time::now() + ros::Duration(te);
+     ros::Time startTime = ros::Time::now();
+     ros::Rate rate(1/stepSize);
+
+     //Schleife für Point Kommandierung
+     //Aus der GUI kann Flag zum stoppen des Roboters gesetzt werden
+     movFlag = true;
+     while(ros::ok() && ros::Time::now()<= endTime && movFlag){
+       ros::Duration tr = ros::Time::now() - startTime;
+       double t = tr.toSec();
+
+       for (int i=0;i<3;i++){
+         calcCubicPoint(te,t,pos_start[i],pos_end[i],x_i[i],dx_i[i]);
+       }
+
+       kinematics.delta_calcInverse(x_i,q_i);
+       kinematics.delta_calcJointVel(x_i,dx_i,q_i,dq_i);
+       kinematics.rad2deg(q_i);
+
+       //Konstante Geschwindigkeit setze (Problem.. :( Verzögerung der Umsetzung)
+       dq_i[0]=40;
+       dq_i[1]=40;
+       dq_i[2]=40;
+       qn->sendDeltaCart(x_i);
+       qn->sendDeltaAngle(q_i,dq_i);
+       ros::spinOnce();
+
+       //Während Schleife auf Eingaben hören
+        qApp->processEvents();
+       //Ggf. warten damit Frequenz nicht überschritten wird
+       rate.sleep();
+
+     }
+     movFlag = false;
+     break;
+   }
+   }
+
+    return 0;
+}
+
+//##########  CUBIC FUNCTIONS   ##################################
+
 void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_start, const std::vector<float> & q_end,std::vector<float> & q,std::vector<float> & dq){
 //Berechnet Gelenkwinkel mittels kubischer Interpolation
 //Da PTP Bewegung ist die Bewegung nicht geradlinig
@@ -26,10 +208,23 @@ void DeltaPlanner::getCubicCartesian(float te, float t,const std::vector<float> 
   kinematics.delta_calcJointVel(x,dx,q,dq);
 
 }
+void DeltaPlanner::calcCubicPoint(float te, float t_i, float p_start, float p_end, float &p_i, float &v_i){
+  //Punkt auf kubischem Polynom berechnen
+   float a0, a2, a3;
+   a0 = p_start;
+   a2 = -3*(p_start- p_end)/(te*te);
+   a3 = 2*(p_start - p_end)/(te * te *te);
+   p_i = a0 + a2*t_i*t_i + a3*t_i*t_i*t_i;
+   v_i = 2*a2*t_i + 3*a3*t_i*t_i;
+}
+
+//##########  CIRCLE FUNCTIONS   ##################################
 
 void DeltaPlanner::calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Eigen::Vector3d &p2,const Eigen::Vector3d &p3,Eigen::Vector3d &circCenter,Eigen::Vector3d &circAxis,double &circRadius){
   //Berechne Kreis anhand dreier Punkte, die auf dem Kreis liegen
   // triangle "edges"
+
+
   const Vector3d t = p2-p1;
   const Vector3d u = p3-p1;
   const Vector3d v = p3-p2;
@@ -49,38 +244,7 @@ void DeltaPlanner::calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Ei
   circRadius = sqrt(tt * uu * vv * iwsl2*0.5);
   circAxis   = w/w.norm();
 
-}
 
-bool DeltaPlanner::circleInWorkspace(const Vector3d &circCenter, const Vector3d &circAxis, const double &circRadius)
-{
-  //Überprüfen ob ausgewählter Kreis komplett im Arbeitsraum liegt
-  float theta_i = 0;
-  vector<float> pos_i(3,0);
-  Vector3d cao_helper(4.0+circAxis[0], 4.0+circAxis[0]+circAxis[1], 4.0+circAxis[0]+circAxis[1]+circAxis[2]);
-  //Orthogonaler Vektor zu Kreisachse
-  Vector3d cao = cao_helper.cross(circAxis);
-  cao = cao/cao.norm();
-  //Punkt auf Kreis
-  Vector3d cp = circCenter + cao*circRadius;
- while(theta_i <= 2*M_PI){
-
-
-    rotatePointAroundCircleAxis(cp ,pos_i,theta_i,circAxis);
-    if(giveBoundedPoint(pos_i[0],pos_i[1],pos_i[2]) == 2) return false;
-    //100 verschiedene Winkel überprüfen
-    theta_i += 2*M_PI/100;
-  }
-  return true;
-}
-
-void DeltaPlanner::calcCubicPoint(float te, float t_i, float p_start, float p_end, float &p_i, float &v_i){
-  //Punkt auf kubischem Polynom berechnen
-   float a0, a2, a3;
-   a0 = p_start;
-   a2 = -3*(p_start- p_end)/(te*te);
-   a3 = 2*(p_start - p_end)/(te * te *te);
-   p_i = a0 + a2*t_i*t_i + a3*t_i*t_i*t_i;
-   v_i = 2*a2*t_i + 3*a3*t_i*t_i;
 }
 
 void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vector<float> &q, double theta,const Eigen::Vector3d &r)
@@ -104,6 +268,29 @@ void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vec
    q[2] += ((1 - costheta) * r[1] * r[2] + r[0] * sintheta) * p[1];
    q[2] += (costheta + (1 - costheta) * r[2] * r[2]) * p[2];
 
+}
+
+bool DeltaPlanner::circleInWorkspace(const Vector3d &circCenter, const Vector3d &circAxis, const double &circRadius)
+{
+  //Überprüfen ob ausgewählter Kreis komplett im Arbeitsraum liegt
+  float theta_i = 0;
+  vector<float> pos_i(3,0);
+  Vector3d cao_helper(4.0+circAxis[0], 4.0+circAxis[0]+circAxis[1], 4.0+circAxis[0]+circAxis[1]+circAxis[2]);
+  //Orthogonaler Vektor zu Kreisachse
+  Vector3d cao = cao_helper.cross(circAxis);
+  cao = cao/cao.norm();
+  //Punkt auf Kreis
+  Vector3d cp = circCenter + cao*circRadius;
+
+ while(theta_i <= 2*M_PI){
+
+
+    rotatePointAroundCircleAxis(cp ,pos_i,theta_i,circAxis);
+    if(giveBoundedPoint(pos_i[0],pos_i[1],pos_i[2]) == 2) return false;
+    //100 verschiedene Winkel überprüfen
+    theta_i += 2*M_PI/100;
+  }
+  return true;
 }
 //##---WORKSPACE FUNCTIONS----##################################################
 int DeltaPlanner::readWorkSpace() {

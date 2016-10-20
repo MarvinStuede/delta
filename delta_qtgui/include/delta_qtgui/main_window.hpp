@@ -16,7 +16,7 @@
 #include "ui_main_window.h"
 #include "qnode.hpp"
 #include "Kinematics.h"
-#include "deltaplanner.h"
+#include "deltaplanner.hpp"
 #include <vector>
 #include <eigen3/Eigen/Dense>
 
@@ -49,7 +49,15 @@ public:
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float vmax,float stepSize);
   void goHouse(float vmax,float stepSize);
-  bool goCircular(float vmax,float stepSize);
+  //bool goCircular(float vmax,float stepSize);
+  void goPTP(const DeltaPlanner::InterpolationMode &mode);
+  void goCircular();
+
+  QNode qnode;
+  QThread* movThread;
+  DeltaPlanner* deltaMov;
+  Q_SIGNALS:
+  void setMovFlag(const bool en);
 
 
 public Q_SLOTS:
@@ -72,7 +80,7 @@ public Q_SLOTS:
   void on_sendButton_clicked();
   void on_resetTopButton_clicked();
   void on_houseButton_clicked();
-  void on_pushButton_clicked();
+  void on_homeButton_clicked();
   void on_speedSlider_valueChanged(int value);
   void on_speedBox_returnPressed();
   void stopMotion();
@@ -82,7 +90,6 @@ public Q_SLOTS:
   void on_led_radius_returnPressed();
   void on_radioCircular_clicked();
   void on_radioCartCubic_clicked();
-  void on_radioAngCubic_clicked();
   void on_radioLinear_clicked();
   void on_radioContinuous_clicked();
 
@@ -92,10 +99,10 @@ public Q_SLOTS:
     void updateLoggingView(); // no idea why this can't connect automatically
     void updateJointState(float q0, float q1, float q2);
 
+
 private:
 	Ui::MainWindowDesign ui;
   void showValues();
-	QNode qnode;
   Kinematics kinematics;
   DeltaPlanner deltaplanner;
 

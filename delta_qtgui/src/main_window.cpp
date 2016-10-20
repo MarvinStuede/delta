@@ -31,7 +31,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 	: QMainWindow(parent)
   , qnode(argc,argv)
   ,kinematics(32,80,295,100)
-  ,deltaplanner()
+  ,deltaplanner(qnode)
 {
 
 	ui.setupUi(this); // Calling this incidentally connects all ui's triggers to on_...() callbacks in this class.
@@ -44,9 +44,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 
 	ui.view_logging->setModel(qnode.loggingModel());
     QObject::connect(&qnode, SIGNAL(loggingUpdated()), this, SLOT(updateLoggingView()));
-
-
-
+    //Connection für anzeige aktueller Gelenkwinkel
     QObject::connect(&qnode, SIGNAL(JointStateUpdated(float, float, float)), this, SLOT(updateJointState(float, float, float)));
 
     /*********************
@@ -57,6 +55,18 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     }
     while(!(deltaplanner.readWorkSpace()==0));
     showValues();
+
+    //Thread für Bewegung initialisieren
+    movThread = new QThread;
+    deltaMov = new DeltaPlanner(qnode);
+    deltaMov->moveToThread(movThread);
+   // connect(movThread,SIGNAL(started()),deltaMov,SLOT(testthread()));
+    connect(deltaMov, SIGNAL(finished()), movThread, SLOT(quit()));
+    connect(deltaMov, SIGNAL(finished()), deltaMov, SLOT(deleteLater()));
+    connect(this,SIGNAL(setMovFlag(const bool)),deltaMov,SLOT(setFlag(const bool)));
+   // connect(this,SIGNAL(startMov()),deltaMov,SLOT(testthread()));
+    movThread->start();
+
 }
 
 MainWindow::~MainWindow() {}
@@ -77,11 +87,6 @@ void MainWindow::showNoMasterMessage() {
 ** Implemenation [Slots][manually connected]
 *****************************************************************************/
 
-/**
- * This function is signalled by the underlying model. When the model changes,
- * this will drop the cursor down to the last line in the QListview to ensure
- * the user can always see the latest log message.
- */
 void MainWindow::updateLoggingView() {
         ui.view_logging->scrollToBottom();
 }
@@ -97,114 +102,9 @@ void MainWindow::updateJointState(float q0, float q1, float q2){
   ss.str(""); ss << q2 << "°";
    s=ss.str();
   ui.lineEd_t3_ist->setText(QString::fromUtf8(s.c_str()));
-}
-
-/*****************************************************************************
-** Implementation [Menu]
-*****************************************************************************/
-
-void MainWindow::on_actionAbout_triggered() {
-    QMessageBox::about(this, tr("About ..."),tr("<h2>PACKAGE_NAME Test Program 0.10</h2><p>Copyright Yujin Robot</p><p>This package needs an about description.</p>"));
-}
-void MainWindow::on_disableButton_clicked()
-{
-    qnode.sendDeltaCmd("CTRLSTOP");
 
 }
-void MainWindow::on_enableButton_clicked()
-{
-    qnode.sendDeltaCmd("CTRLSTART");
-}
-void MainWindow::on_resetButton_clicked()
-{
-    qnode.sendDeltaCmd("RESET");
-    ui.Slider_X->setValue(0);
-    ui.Slider_Y->setValue(0);
-    ui.Slider_Z->setValue(-284 * 10);
-    showValues();
-}
-void MainWindow::on_Slider_X_valueChanged(int value)
-{
 
-   showValues();
-   if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-
-}
-void MainWindow::on_lineEd_X_returnPressed()
-{
-  ui.Slider_X->setValue(ui.lineEd_X->text().toFloat()*10);
-  showValues();
-  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-}
-void MainWindow::on_Slider_Y_valueChanged(int value)
-{
-
-    showValues();
-    if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-
-
-}
-void MainWindow::on_lineEd_Y_returnPressed()
-{
-    ui.Slider_Y->setValue(ui.lineEd_Y->text().toFloat()*10);
-  showValues();
-  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-}
-void MainWindow::on_Slider_Z_valueChanged(int value)
-{
-
-   showValues();
-   if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-}
-void MainWindow::on_lineEd_Z_returnPressed()
-{
-    ui.Slider_Z->setValue(ui.lineEd_Z->text().toFloat()*10);
-  showValues();
-  if(ui.radioContinuous->isChecked()) goUncoordinatedLinear();
-}
-
-void MainWindow::on_houseButton_clicked()
-{
-  float vmax= ui.speedBox->text().toFloat();
-  float stepSize= ui.stepsizeEd->text().toFloat();
-  goHouse(vmax,stepSize);
-}
-void MainWindow::on_pushButton_clicked()
-{
-      qnode.sendDeltaCmd("TURNOFF");
-}
-void MainWindow::on_speedSlider_valueChanged(int value)
-{
-    stringstream ss;
-    ss << value;
-    ui.speedBox->setText(QString::fromStdString(ss.str()));
-}
-void MainWindow::on_speedBox_returnPressed()
-{
-    ui.speedSlider->setValue( ui.speedBox->text().toFloat());
-}
-void MainWindow::on_sendButton_clicked()
-{
-   float vmax= ui.speedBox->text().toFloat();
-   float stepSize= ui.stepsizeEd->text().toFloat();
-   if(ui.radioCartCubic->isChecked() || ui.radioAngCubic->isChecked()){
-     goCubic(vmax,stepSize);
-   }
-   else if (ui.radioLinear->isChecked()){
-     goCoordinatedLinear(vmax);
-   }
-   else if(ui.radioCircular->isChecked()){
-     goCircular(vmax,stepSize);
-   }
-
-}
-void MainWindow::on_resetTopButton_clicked()
-{
-  ui.Slider_X->setValue(0);
-  ui.Slider_Y->setValue(0);
-  ui.Slider_Z->setValue(-284 * 10);
-  showValues();
-}
 
 void MainWindow::showValues(){
 
@@ -232,8 +132,6 @@ void MainWindow::showValues(){
     ui.label_workspace->setText("Error: Out of Workspace");
     ui.label_workspace->setStyleSheet("color: red}");
   }
-
-
 
 
   string s;
@@ -294,6 +192,7 @@ void MainWindow::showValues(){
   Vector3d p2(ui.led_CP2_X->text().toFloat(),ui.led_CP2_Y->text().toFloat(),ui.led_CP2_Z->text().toFloat());
   Vector3d p3(ui.led_CP3_X->text().toFloat(),ui.led_CP3_Y->text().toFloat(),ui.led_CP3_Z->text().toFloat());
   deltaplanner.calcCircleFromThreePoints(p1,p2,p3,circCenter,circAxis,circRadius);
+
   if(deltaplanner.circleInWorkspace(circCenter,circAxis,circRadius)){
     ui.label_workspace_circle->setText("Circle in Workspace");
     ui.label_workspace_circle->setStyleSheet("QLabel {color : green}");
@@ -310,187 +209,44 @@ void MainWindow::showValues(){
   }
 
 }
-
-void MainWindow::goCoordinatedLinear(float v){
-  //Synchronisierte Linearbewegung mit konstanter Geschwindigkeit
-  vector<float> q_goal(3,0);
-  vector<float> dq(3,90);
-  vector<float> x(3,0);
-  vector<float> q_start(3,0);
-  float tmax = 0;
-  vector<float> dist(3,0);
-
-  x[0] = (float)ui.Slider_X->value() / 10;
-  x[1]  = (float)ui.Slider_Y->value() / 10;
-  x[2]  = (float)ui.Slider_Z->value() / 10;
-
-  qnode.getDeltaAngles("GETANGLES", q_start);
-  kinematics.delta_calcInverse(x,q_goal);
-    kinematics.rad2deg(q_goal);
-  for(int i = 0;i<3;i++){
-      dist[i]=fabs(q_goal[i] - q_start[i]);
-
-      if (dist[i] / v > tmax) tmax = dist[i]/v;
-  }
-
-  dq[0]=dist[0]/tmax;
-  dq[1]=dist[1]/tmax;
-  dq[2]=dist[2]/tmax;
-  qnode.sendDeltaCart(x);
-
- qnode.sendDeltaAngle(q_goal,dq);
-}
-void MainWindow::goUncoordinatedLinear(){
-  //Unsynchronisierte Linearbewegung (benutzt für z.B. cont. sending)
-
-  vector<float> q_goal(3,0);
-  vector<float> dq(3,90);
-  vector<float> x(3,0);
-
-  x[0] = (float)ui.Slider_X->value() / 10;
-  x[1]  = (float)ui.Slider_Y->value() / 10;
-  x[2]  = (float)ui.Slider_Z->value() / 10;
-
-  kinematics.delta_calcInverse(x,q_goal);
-  kinematics.rad2deg(q_goal);
-  qnode.sendDeltaCart(x);
-  qnode.sendDeltaAngle(q_goal,dq);
-
-}
-void MainWindow::goCubic(float vmax,float stepSize){
-  string state = qnode.getDeltaInfo("GETSTATE");
-
-  if(state.compare("WAITING")==0){
-    vector<float> q_end(3,0);
-    vector<float> q_start(3,0);
-    vector<float> q(3,0);
-    vector<float> dq(3,0);
-    vector<float> pos_start(3,0);
+void MainWindow::goPTP(const DeltaPlanner::InterpolationMode &mode){
+  //Funktion zum Aufruf einer PTP Bewegung
     vector<float> pos_end(3,0);
-    vector<float> xi(3,0);
-    vector<float> dxi(3,0);
-
-    float te = 0;
-
     pos_end[0] = (float)ui.Slider_X->value() / 10;
-    pos_end[1] = (float)ui.Slider_Y->value() / 10;
-    pos_end[2] = (float)ui.Slider_Z->value() / 10;
-
-    qnode.getDeltaAngles("GETANGLES", q_start);
-
-    bool moveCart = ui.radioCartCubic->isChecked();
-    kinematics.delta_calcInverse(pos_end,q_end);
-    kinematics.delta_calcForward(q_start,pos_start);
-    kinematics.rad2deg(q_end);
-
-    float tj = 0;
-    for(int j=0;j<3;j++){
-      //Dauer für Bewegung anhand Max. Geschwindigkeit
-      //vmax erreicht bei te/2
-        tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
-        if (tj > te) te = tj;
-     }
-    ros::Time endTime = ros::Time::now() + ros::Duration(te);
-    ros::Time startTime = ros::Time::now();
-    ros::Rate rate(1/stepSize);
-    vector<float> dq_end(3,0);
-
-    while(ros::ok() && ros::Time::now()<= endTime){
-      ros::Duration tr = ros::Time::now() - startTime;
-      double t = tr.toSec();
-
-      if(moveCart){
-        deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
-        kinematics.rad2deg(q);
-      }
-      else{
-
-        deltaplanner.getCubicAngle(te,t,q_start,q_end,q,dq);
-        kinematics.delta_calcForward(q,xi);
-      }
-
-      dq[0]=40;
-      dq[1]=40;
-      dq[2]=40;
-      qnode.sendDeltaCart(xi);
-      qnode.sendDeltaAngle(q,dq);
-      ros::spinOnce();
-
-      qApp->processEvents();
-      if(ui.stopButton->isDown()) break;
-
-      rate.sleep();
+    pos_end[1]  = (float)ui.Slider_Y->value() / 10;
+    pos_end[2]  = (float)ui.Slider_Z->value() / 10;
+    float vmax= ui.speedBox->text().toFloat();
+    float stepSize= ui.stepsizeEd->text().toFloat();
+    if(mode == DeltaPlanner::NONE)
+      deltaMov->movePTP(mode,pos_end,vmax,stepSize);
+    else{
+      //Nur fahren wenn Roboter bereit
+      string state = qnode.getDeltaInfo("GETSTATE");
+      if(state.compare("WAITING")==0)
+        deltaMov->movePTP(mode,pos_end,vmax,stepSize);
     }
-  }
 }
+void MainWindow::goCircular(){
+  //Funktion zum Aufruf einer Kreisbewegung
+    vector<vector<float> > circlePoints(3, vector<float>(3));
 
-bool MainWindow::goCircular(float vmax, float stepSize){
+    circlePoints[0][0] = ui.led_CP1_X->text().toFloat();
+    circlePoints[0][1] = ui.led_CP1_Y->text().toFloat();
+    circlePoints[0][2] = ui.led_CP1_Z->text().toFloat();
+    circlePoints[1][0] = ui.led_CP2_X->text().toFloat();
+    circlePoints[1][1] = ui.led_CP2_Y->text().toFloat();
+    circlePoints[1][2] = ui.led_CP2_Z->text().toFloat();
+    circlePoints[2][0] = ui.led_CP3_X->text().toFloat();
+    circlePoints[2][1] = ui.led_CP3_Y->text().toFloat();
+    circlePoints[2][2] = ui.led_CP3_Z->text().toFloat();
 
-  vector<float> q_start(3,0);
-  vector<float> pos_start(3,0);
-  vector<float> dq(3,0);
-  vector<float> q(3,0);
-  string state = qnode.getDeltaInfo("GETSTATE");
+    float vmax= ui.speedBox->text().toFloat();
+    float stepSize= ui.stepsizeEd->text().toFloat();
+    string state = qnode.getDeltaInfo("GETSTATE");
+    if(state.compare("WAITING")==0)
+      deltaMov->moveCircular(circlePoints,360,vmax,stepSize);
 
-  if(state.compare("WAITING")==0){
-    qnode.getDeltaAngles("GETANGLES", q_start);
-    kinematics.delta_calcForward(q_start,pos_start);
-
-    using namespace Eigen;
-
-     //Drei Punkte auf Kreis
-    Vector3d p1(ui.led_CP1_X->text().toFloat(),ui.led_CP1_Y->text().toFloat(),ui.led_CP1_Z->text().toFloat());
-    Vector3d p2(ui.led_CP2_X->text().toFloat(),ui.led_CP2_Y->text().toFloat(),ui.led_CP2_Z->text().toFloat());
-    Vector3d p3(ui.led_CP3_X->text().toFloat(),ui.led_CP3_Y->text().toFloat(),ui.led_CP3_Z->text().toFloat());
-    Vector3d circCenter;
-    Vector3d circAxis;
-    double circRadius;
-
-    deltaplanner.calcCircleFromThreePoints(p1,p2,p3,circCenter,circAxis,circRadius);
-    //Punkt auf Kreis in aktueller Iteration
-    vector<float> pos_i(3,0);
-
-    //Winkel der gefahren werden soll
-    float theta_end = 360 * M_PI/180;
-    float theta_i = 0;
-    float dtheta_i = 0;
-
-    //Gesamtdauer für Kreisfahrt
-    float te = fabs(1.5*theta_end*circRadius/vmax);
-
-    ros::Time endTime = ros::Time::now() + ros::Duration(te);
-    ros::Time startTime = ros::Time::now();
-    ros::Rate rate(1/stepSize);
-    vector<float> xi(3,0);
-
-    while(ros::ok() && ros::Time::now()<= endTime){
-      ros::Duration tr = ros::Time::now() - startTime;
-      double t = tr.toSec();
-      //Gebe Punkt auf Kreis an bestimmtem Winkel zurück (Im Kreiskoord.-system)
-      deltaplanner.calcCubicPoint(te,t,0,theta_end,theta_i,dtheta_i);
-
-      deltaplanner.rotatePointAroundCircleAxis(p1 - circCenter ,pos_i,theta_i,circAxis);
-      //In Taskspace transformieren
-      for(int i=0;i<3;i++) xi[i]= pos_i[i] + circCenter[i];
-
-      qnode.sendDeltaCart(xi);
-      dq[0]=40;
-      dq[1]=40;
-      dq[2]=40;
-
-      kinematics.delta_calcInverse(xi,q);
-      kinematics.rad2deg(q);
-      qnode.sendDeltaAngle(q,dq);
-      ros::spinOnce();
-      qApp->processEvents();
-      if(ui.stopButton->isDown()) break;
-
-      rate.sleep();
-    }
-
-  }
 }
-
 void MainWindow::goHouse(float vmax,float stepSize){
   string state = qnode.getDeltaInfo("GETSTATE");
 
@@ -608,47 +364,138 @@ void MainWindow::goHouse(float vmax,float stepSize){
      ros::Duration(0.5).sleep();
   }
 }
-
 void MainWindow::stopMotion(){
   qnode.sendDeltaCmd("STOPMOVE");
 }
+/*****************************************************************************
+** CALLBACKS
+*****************************************************************************/
+//########### BUTTONS #############################
+void MainWindow::on_disableButton_clicked(){
+  qnode.sendDeltaCmd("CTRLSTOP");
+}
+void MainWindow::on_enableButton_clicked(){
+  qnode.sendDeltaCmd("CTRLSTART");
+}
+void MainWindow::on_sendButton_clicked()
+{
+
+   if(ui.radioCartCubic->isChecked()){
+     if(!(deltaMov->movFlag)) goPTP(DeltaPlanner::CUBICCART);
+   }
+   else if (ui.radioLinear->isChecked()){
+     goPTP(DeltaPlanner::LINEAR);
+   }
+   else if(ui.radioCircular->isChecked()){
+     goCircular();
+   }
+
+}
+void MainWindow::on_resetButton_clicked(){
+    qnode.sendDeltaCmd("RESET");
+    ui.Slider_X->setValue(0);
+    ui.Slider_Y->setValue(0);
+    ui.Slider_Z->setValue(-284 * 10);
+    showValues();
+}
+void MainWindow::on_homeButton_clicked()
+{
+      qnode.sendDeltaCmd("TURNOFF");
+}
+void MainWindow::on_houseButton_clicked()
+{
+  float vmax= ui.speedBox->text().toFloat();
+  float stepSize= ui.stepsizeEd->text().toFloat();
+  goHouse(vmax,stepSize);
+}
 void MainWindow::on_stopButton_clicked()
 {
+   setMovFlag(false);
    stopMotion();
+}
+void MainWindow::on_resetTopButton_clicked()
+{
+  ui.Slider_X->setValue(0);
+  ui.Slider_Y->setValue(0);
+  ui.Slider_Z->setValue(-284 * 10);
+  showValues();
 }
 void MainWindow::on_gripopenButton_clicked()
 {
   qnode.sendDeltaCmd("GRIPPEROPEN");
 }
-
 void MainWindow::on_gripcloseButton_clicked()
 {
   qnode.sendDeltaCmd("GRIPPERCLOSE");
+}
+
+void MainWindow::on_actionAbout_triggered() {
+    QMessageBox::about(this, tr("About ..."),tr("<h2>PACKAGE_NAME Delta QtGUI</h2><p>Copyright Marvin Stüde/p><p>-</p>"));
+}
+void MainWindow::on_Slider_X_valueChanged(int value)
+{
+
+   showValues();
+   if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+
+}
+void MainWindow::on_lineEd_X_returnPressed()
+{
+  ui.Slider_X->setValue(ui.lineEd_X->text().toFloat()*10);
+  showValues();
+  if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+}
+void MainWindow::on_Slider_Y_valueChanged(int value)
+{
+    showValues();
+    if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+
+}
+void MainWindow::on_lineEd_Y_returnPressed()
+{
+    ui.Slider_Y->setValue(ui.lineEd_Y->text().toFloat()*10);
+  showValues();
+  if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+}
+void MainWindow::on_Slider_Z_valueChanged(int value)
+{
+
+   showValues();
+   if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+}
+void MainWindow::on_lineEd_Z_returnPressed()
+{
+    ui.Slider_Z->setValue(ui.lineEd_Z->text().toFloat()*10);
+  showValues();
+  if(ui.radioContinuous->isChecked()) goPTP(DeltaPlanner::NONE);
+}
+void MainWindow::on_speedSlider_valueChanged(int value)
+{
+    stringstream ss;
+    ss << value;
+    ui.speedBox->setText(QString::fromStdString(ss.str()));
+}
+void MainWindow::on_speedBox_returnPressed()
+{
+    ui.speedSlider->setValue( ui.speedBox->text().toFloat());
 }
 void MainWindow::on_led_radius_returnPressed()
 {
     showValues();
 }
+//########### RADIO BUTTONS #############################
 void MainWindow::on_radioCircular_clicked()
 {
     showValues();
 }
-
 void MainWindow::on_radioCartCubic_clicked()
 {
     showValues();
 }
-
-void MainWindow::on_radioAngCubic_clicked()
-{
-    showValues();
-}
-
 void MainWindow::on_radioLinear_clicked()
 {
     showValues();
 }
-
 void MainWindow::on_radioContinuous_clicked()
 {
     showValues();
@@ -680,8 +527,13 @@ void MainWindow::WriteSettings() {
 void MainWindow::closeEvent(QCloseEvent *event)
 {
 	WriteSettings();
+  movThread->quit();
 	QMainWindow::closeEvent(event);
+
 }
 
 }  // namespace delta_qtgui
+
+
+
 

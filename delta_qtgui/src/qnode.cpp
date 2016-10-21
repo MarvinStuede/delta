@@ -71,6 +71,7 @@ bool QNode::init() {
   infoClient = n.serviceClient<delta_arduino::GetInfo>("delta/get_info");
 
 	start();
+
 	return true;
 }
 

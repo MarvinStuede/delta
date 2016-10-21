@@ -63,9 +63,10 @@ file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINK
 
 add_executable(delta_qtgui ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_FORMS_HPP} ${QT_MOC_HPP})
 add_dependencies(delta_qtgui ${delta_arduino_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_library(kin src/Kinematics.cpp)
-add_library(dp src/deltaplanner.cpp)
-target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${Eigen_LIBRARIES} kin dp)
+add_library(kin src/delta_kinematics.cpp)
+add_library(dp src/delta_planner.cpp)
+add_library(dpr src/delta_posereader.cpp)
+target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${Eigen_LIBRARIES} yaml-cpp kin dp dpr)
 
 install(TARGETS delta_qtgui RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

@@ -8,10 +8,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <vector>
-#include <Kinematics.h>
+#include <delta_kinematics.h>
 #include <eigen3/Eigen/Dense>
 #include "qnode.hpp"
 #include <QObject>
+#include "delta_posereader.hpp"
 
 
 #define XY_LEN			100
@@ -29,6 +30,10 @@ public:
     LINEAR,
     CUBICCART
   };
+    enum MotionMode{
+    ABSOLUTE,
+    RELATIVE
+  };
 
   int Workspace[Z_ROWS][XY_LEN][2];
   DeltaPlanner(delta_qtgui::QNode &qnode);
@@ -43,8 +48,11 @@ public:
   void calcCubicPoint(float te, float t_i, float p_start, float p_end, float &p_i, float &v_i);
   void calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Eigen::Vector3d &p2,const Eigen::Vector3d &p3,Eigen::Vector3d &circCenter,Eigen::Vector3d &circAxis,double &circRadius);
   bool circleInWorkspace(const Eigen::Vector3d &circCenter,const Eigen::Vector3d &circAxis,const double &circRadius);
-  int movePTP(const InterpolationMode &imode, std::vector<float> &pos_end, float vmax, float stepSize);
-  int moveCircular(std::vector<std::vector<float> > &circlePoints, float angle, float vmax, float stepSize);
+  int movePTP(std::string posname, float vmax = 35, float stepSize = 0.005,const InterpolationMode &imode = CUBICCART,const MotionMode &mmode = ABSOLUTE);
+  int movePTP(std::vector<float> &pos_end, float vmax = 35, float stepSize = 0.005,const InterpolationMode &imode = CUBICCART,const MotionMode &mmode = ABSOLUTE);
+  int movePTP_(std::vector<float> &pos_end, float vmax = 35, float stepSize = 0.005,const InterpolationMode &imode = CUBICCART,const MotionMode &mmode = ABSOLUTE);
+  int moveCircular(std::vector<std::vector<float> > &circlePoints, float angle = 360, float vmax = 35.0, float stepSize = 0.005);
+  int drawYAML(std::string filename,std::vector<float> &start_pos,float vmax = 35);
 
 
   bool movFlag;

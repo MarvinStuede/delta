@@ -15,8 +15,9 @@
 #include <QtGui/QMainWindow>
 #include "ui_main_window.h"
 #include "qnode.hpp"
-#include "Kinematics.h"
-#include "deltaplanner.hpp"
+#include "delta_kinematics.h"
+#include "delta_planner.hpp"
+#include "delta_posereader.hpp"
 #include <vector>
 #include <eigen3/Eigen/Dense>
 
@@ -44,18 +45,20 @@ public:
 
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
+  void setTeachedPoint(std::string pointname);
   void goCoordinatedLinear(float v);
   void goUncoordinatedLinear();
   void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
   void goCubic(float vmax,float stepSize);
   void goHouse(float vmax,float stepSize);
-  //bool goCircular(float vmax,float stepSize);
   void goPTP(const DeltaPlanner::InterpolationMode &mode);
   void goCircular();
 
   QNode qnode;
+  //Thread/Instanz von Deltaplenner zur Bewegungskommandierung
   QThread* movThread;
   DeltaPlanner* deltaMov;
+
   Q_SIGNALS:
   void setMovFlag(const bool en);
 
@@ -92,7 +95,11 @@ public Q_SLOTS:
   void on_radioCartCubic_clicked();
   void on_radioLinear_clicked();
   void on_radioContinuous_clicked();
-
+  void on_button_teachPoint_clicked();
+  void setPoseListEntries();
+  void on_led_pointName_textEdited(const QString &arg1);
+  void on_listPoses_itemClicked(QListWidgetItem *item);
+  void on_button_drawCross_clicked();
     /******************************************
     ** Manual connections
     *******************************************/
@@ -105,6 +112,7 @@ private:
   void showValues();
   Kinematics kinematics;
   DeltaPlanner deltaplanner;
+  delta_posereader::PoseMap poses;
 
 };
 

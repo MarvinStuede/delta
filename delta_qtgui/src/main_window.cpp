@@ -14,6 +14,7 @@
 #include <iostream>
 #include "../include/delta_qtgui/main_window.hpp"
 
+
 /*****************************************************************************
 ** Namespaces
 *****************************************************************************/
@@ -55,17 +56,31 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     }
     while(!(deltaplanner.readWorkSpace()==0));
     showValues();
+    //Tastaturshortcuts
+    QShortcut *scM = new QShortcut(QKeySequence("M"), this);
+    connect(scM, SIGNAL(activated()), this, SLOT(on_sendButton_clicked()));
+    QShortcut *scS = new QShortcut(QKeySequence("S"), this);
+    connect(scS, SIGNAL(activated()), this, SLOT(on_stopButton_clicked()));
+    QShortcut *scE = new QShortcut(QKeySequence("E"), this);
+    connect(scE, SIGNAL(activated()), this, SLOT(on_enableButton_clicked()));
+    QShortcut *scH = new QShortcut(QKeySequence("H"), this);
+    connect(scH, SIGNAL(activated()), this, SLOT(on_homeButton_clicked()));
 
     //Thread für Bewegung initialisieren
     movThread = new QThread;
     deltaMov = new DeltaPlanner(qnode);
     deltaMov->moveToThread(movThread);
-   // connect(movThread,SIGNAL(started()),deltaMov,SLOT(testthread()));
     connect(deltaMov, SIGNAL(finished()), movThread, SLOT(quit()));
     connect(deltaMov, SIGNAL(finished()), deltaMov, SLOT(deleteLater()));
     connect(this,SIGNAL(setMovFlag(const bool)),deltaMov,SLOT(setFlag(const bool)));
-   // connect(this,SIGNAL(startMov()),deltaMov,SLOT(testthread()));
+
     movThread->start();
+
+    //Geteachte Punkte einlesen
+    poses=delta_posereader::read();
+    setTeachedPoint(poses.begin()->first);
+    setPoseListEntries();
+
 
 }
 
@@ -218,18 +233,18 @@ void MainWindow::goPTP(const DeltaPlanner::InterpolationMode &mode){
     float vmax= ui.speedBox->text().toFloat();
     float stepSize= ui.stepsizeEd->text().toFloat();
     if(mode == DeltaPlanner::NONE)
-      deltaMov->movePTP(mode,pos_end,vmax,stepSize);
+      deltaMov->movePTP(pos_end,vmax,stepSize,mode);
     else{
       //Nur fahren wenn Roboter bereit
       string state = qnode.getDeltaInfo("GETSTATE");
       if(state.compare("WAITING")==0)
-        deltaMov->movePTP(mode,pos_end,vmax,stepSize);
+        deltaMov->movePTP(pos_end,vmax,stepSize,mode);
     }
 }
 void MainWindow::goCircular(){
   //Funktion zum Aufruf einer Kreisbewegung
     vector<vector<float> > circlePoints(3, vector<float>(3));
-
+    float angle = ui.led_angle->text().toFloat();
     circlePoints[0][0] = ui.led_CP1_X->text().toFloat();
     circlePoints[0][1] = ui.led_CP1_Y->text().toFloat();
     circlePoints[0][2] = ui.led_CP1_Z->text().toFloat();
@@ -244,7 +259,7 @@ void MainWindow::goCircular(){
     float stepSize= ui.stepsizeEd->text().toFloat();
     string state = qnode.getDeltaInfo("GETSTATE");
     if(state.compare("WAITING")==0)
-      deltaMov->moveCircular(circlePoints,360,vmax,stepSize);
+      deltaMov->moveCircular(circlePoints,angle,vmax,stepSize);
 
 }
 void MainWindow::goHouse(float vmax,float stepSize){
@@ -367,6 +382,24 @@ void MainWindow::goHouse(float vmax,float stepSize){
 void MainWindow::stopMotion(){
   qnode.sendDeltaCmd("STOPMOVE");
 }
+void MainWindow::setTeachedPoint(std::string pointname){
+   //Slider auf Wert von Comboboxelement setzen
+     ui.Slider_X->setValue(poses[pointname].x*10);
+     ui.Slider_Y->setValue(poses[pointname].y*10);
+     ui.Slider_Z->setValue(poses[pointname].z*10);
+     showValues();
+
+
+}
+void MainWindow::setPoseListEntries(){
+//Listboxeinträge auf Map (YAML) Inhalt setzen
+     ui.listPoses->clear();
+    for(delta_posereader::PoseMap::iterator it=poses.begin();it!=poses.end();++it){
+      ui.listPoses->addItem(QString::fromStdString(it->first));
+    }
+
+}
+
 /*****************************************************************************
 ** CALLBACKS
 *****************************************************************************/
@@ -428,7 +461,22 @@ void MainWindow::on_gripcloseButton_clicked()
 {
   qnode.sendDeltaCmd("GRIPPERCLOSE");
 }
+void MainWindow::on_button_teachPoint_clicked()
+{
+  //Aktuellen Punkt map hinzufügen und speichern
 
+  std::string pointname = ui.led_pointName->text().toStdString();
+  geometry_msgs::Point point;
+  point.x = (float)ui.Slider_X->value() / 10;
+  point.y = (float)ui.Slider_Y->value() / 10;
+  point.z = (float)ui.Slider_Z->value() / 10;
+  poses.insert(poses.end(),std::pair<std::string,geometry_msgs::Point>(pointname,point));
+  delta_posereader::write(poses);
+  setPoseListEntries();
+  ui.button_teachPoint->setEnabled(false);
+  deltaMov->movePTP(pointname);
+
+}
 void MainWindow::on_actionAbout_triggered() {
     QMessageBox::about(this, tr("About ..."),tr("<h2>PACKAGE_NAME Delta QtGUI</h2><p>Copyright Marvin Stüde/p><p>-</p>"));
 }
@@ -501,6 +549,28 @@ void MainWindow::on_radioContinuous_clicked()
     showValues();
 }
 
+
+void MainWindow::on_led_pointName_textEdited(const QString &arg1)
+{
+  //Button zum teachsen nur aktivieren wenn Name noch nicht vorhanden
+  ui.button_teachPoint->setEnabled(!(poses.find(arg1.toStdString()) != poses.end()));
+
+}
+void MainWindow::on_listPoses_itemClicked(QListWidgetItem *item)
+{
+       setTeachedPoint(item->text().toStdString());
+}
+void MainWindow::on_button_drawCross_clicked()
+{
+    std::vector<float> pos(3,0);
+    pos[0] = (float)ui.Slider_X->value() / 10;
+    pos[1] = (float)ui.Slider_Y->value() / 10;
+    pos[2] = (float)ui.Slider_Z->value() / 10;
+    float vmax = ui.speedBox->text().toFloat();
+    deltaMov->drawYAML("cross.yaml",pos,vmax);
+}
+
+
 /*****************************************************************************
 ** Implementation [Configuration]
 *****************************************************************************/
@@ -533,7 +603,4 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 }  // namespace delta_qtgui
-
-
-
 

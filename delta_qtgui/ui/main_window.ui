@@ -87,17 +87,43 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_13">
         <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="1">
+           <widget class="QLabel" name="labeld_teachedpoints">
+            <property name="text">
+             <string>Teached Points</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QListWidget" name="listPoses"/>
+          </item>
+          <item row="2" column="1">
+           <layout class="QVBoxLayout" name="verticalLayout_5">
+            <item>
+             <widget class="QLineEdit" name="led_pointName">
+              <property name="text">
+               <string>POINT_NAME</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_teachPoint">
+              <property name="text">
+               <string>Teach Point</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="button_drawCross">
+            <property name="text">
+             <string>Draw Cross</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
@@ -157,7 +183,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Enable</string>
+             <string>&amp;Enable</string>
             </property>
            </widget>
           </item>
@@ -196,7 +222,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Go Home</string>
+             <string>Go &amp;Home</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
@@ -916,8 +942,13 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="font">
+               <font>
+                <underline>false</underline>
+               </font>
+              </property>
               <property name="text">
-               <string>Move</string>
+               <string>&amp;Move</string>
               </property>
              </widget>
             </item>
@@ -930,7 +961,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Stop</string>
+               <string>&amp;Stop</string>
               </property>
              </widget>
             </item>
@@ -1010,13 +1041,25 @@
           <rect>
            <x>40</x>
            <y>240</y>
-           <width>261</width>
+           <width>301</width>
            <height>101</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
           <item row="1" column="0">
            <widget class="QLabel" name="label_8">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>129</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="text">
              <string>Circle Point 1</string>
             </property>
@@ -1031,6 +1074,12 @@
           </item>
           <item row="3" column="0">
            <widget class="QLabel" name="label_10">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Circle Point 3</string>
             </property>
@@ -1038,6 +1087,12 @@
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_9">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
              <string>Circle Point 2</string>
             </property>
@@ -1098,72 +1153,109 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="layoutWidget">
+        <widget class="QLabel" name="label_workspace_circle">
          <property name="geometry">
           <rect>
-           <x>320</x>
-           <y>240</y>
-           <width>191</width>
-           <height>50</height>
+           <x>360</x>
+           <y>320</y>
+           <width>189</width>
+           <height>18</height>
           </rect>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <item>
-             <widget class="QLabel" name="label_14">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Radius</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="led_radius">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>40</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>25</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_workspace_circle">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-              <underline>false</underline>
-              <strikeout>false</strikeout>
-             </font>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>50</weight>
+           <italic>false</italic>
+           <bold>false</bold>
+           <underline>false</underline>
+           <strikeout>false</strikeout>
+          </font>
+         </property>
+         <property name="text">
+          <string>Circle in Workspace</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+        <widget class="QWidget" name="">
+         <property name="geometry">
+          <rect>
+           <x>398</x>
+           <y>240</y>
+           <width>111</width>
+           <height>52</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_15">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
             <property name="text">
-             <string>Circle in Workspace</string>
+             <string>Angle</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignCenter</set>
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="led_angle">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>360</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_14">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Radius</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="led_radius">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>25</string>
             </property>
            </widget>
           </item>

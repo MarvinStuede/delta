@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <launch>
 	<node pkg="tf" type="static_transform_publisher" name="delta_base_broadcaster" args="0 0 0 0 0 0 1 map delta_base 10" />
         <node pkg="tf_broadcaster" type="tf_broadcaster" name="tf_broadcaster" />
@@ -7,7 +8,9 @@
             <param name="trajectory_publish_rate" value="6"/>
             <param name="trajectory_update_rate" value="6"/>
         </node>
-   	<node pkg="delta_qtgui" name="delta_qtgui" type="delta_qtgui"/>
+        <node pkg="delta_qtgui" name="delta_qtgui" type="delta_qtgui"/>
+       <!-- <rosparam command="load" file="$(find launcher)/cfg/poses.yaml" />-->
+        <param name="/delta/poses_file" value="$(find launcher)/cfg/poses.yaml" />
 
 
 </launch>

@@ -1,4 +1,4 @@
-#include "deltaplanner.hpp"
+#include "delta_planner.hpp"
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <QApplication>
@@ -19,12 +19,34 @@ DeltaPlanner::~DeltaPlanner()
 using namespace delta_qtgui;
 using namespace Eigen;
 using namespace std;
+//##########  DRAW FUNCTIONS     #################################
+int DeltaPlanner::drawYAML(std::string filename,std::vector<float> &start_pos,float vmax){
+//Fahre Punkte ab, die in YAML-Datei gegeben sind
+  vector<float> relPos(3,0);
+  delta_posereader::PoseMap poses=delta_posereader::read(filename);
+
+
+  if (movePTP(start_pos)){
+
+    delta_posereader::PoseMap::iterator it=poses.begin();
+
+    do{
+      //Relative Position nach Reihenfolge in YAML setzen
+      relPos[0] = it->second.x;
+      relPos[1] = it->second.y;
+      relPos[2] = it->second.z;
+      if(it==poses.end()) break;
+      ++it;
+    }
+    while(movePTP(relPos,vmax,0.005,CUBICCART,RELATIVE));
+
+   }
+}
 
 //##########  MOTION FUNCTIONS   ##################################
 void DeltaPlanner::setFlag(const bool en){
    movFlag = en;
 }
-
 int DeltaPlanner::moveCircular(vector<vector<float> > &circlePoints, float angle, float vmax, float stepSize){
     //Fahre Kreis bestehend aus drei Punkten
     vector<float> q_start(3,0);
@@ -86,7 +108,24 @@ int DeltaPlanner::moveCircular(vector<vector<float> > &circlePoints, float angle
     }
     movFlag = false;
 }
-int DeltaPlanner::movePTP(const InterpolationMode &imode, vector<float> &pos_end, float vmax, float stepSize){
+int DeltaPlanner::movePTP(std::string posname, float vmax, float stepSize,const InterpolationMode &imode,const MotionMode &mmode){
+     //Überladene Funktion um Punkt nach namen anzufahren
+     delta_posereader::PoseMap poses=delta_posereader::read();
+     vector<float> pos_end(3,0);
+
+     if(poses.find(posname) != poses.end()){
+       pos_end[0]=poses[posname].x;
+       pos_end[1]=poses[posname].y;
+       pos_end[2]=poses[posname].z;
+       return movePTP_(pos_end, vmax,stepSize,imode,mmode);
+     }
+     return -1;
+}
+int DeltaPlanner::movePTP(vector<float> &pos_end, float vmax, float stepSize,const InterpolationMode &imode,const MotionMode &mmode){
+
+    return movePTP_(pos_end, vmax,stepSize,imode,mmode);
+}
+int DeltaPlanner::movePTP_(vector<float> &pos_end, float vmax, float stepSize,const InterpolationMode &imode,const MotionMode &mmode){
 
     //Goal/Start
     vector<float> q_end(3,0);
@@ -105,9 +144,19 @@ int DeltaPlanner::movePTP(const InterpolationMode &imode, vector<float> &pos_end
    qn->getDeltaAngles("GETANGLES", q_start);
    kinematics.delta_calcForward(q_start,pos_start);
 
+   //Bei Relativbewegung Ziel in Absolutposition ausrechnen
+   if(mmode == RELATIVE){
+    for(int i=0;i<3;i++) pos_end[i] += pos_start[i];
+   }
+
    //Endpunkt in Jointkoordinaten berechnen
    kinematics.delta_calcInverse(pos_end,q_end);
    kinematics.rad2deg(q_end);
+
+   //Meldung machen
+   std::stringstream ss;
+   ss<<"Moving to x: "<<pos_end[0]<<" y: "<<pos_end[1]<<" z: "<<pos_end[2];
+   qn->log(QNode::Info,ss.str());
 
    switch(imode){
    //--------------  DIREKT --------------------
@@ -180,16 +229,17 @@ int DeltaPlanner::movePTP(const InterpolationMode &imode, vector<float> &pos_end
        rate.sleep();
 
      }
+     //0 zurückgeben wenn Bewegung abgebrochen
+     if(!movFlag) return 0;
      movFlag = false;
      break;
    }
    }
 
-    return 0;
+    return 1;
 }
 
 //##########  CUBIC FUNCTIONS   ##################################
-
 void DeltaPlanner::getCubicAngle(float te, float t,const std::vector<float> & q_start, const std::vector<float> & q_end,std::vector<float> & q,std::vector<float> & dq){
 //Berechnet Gelenkwinkel mittels kubischer Interpolation
 //Da PTP Bewegung ist die Bewegung nicht geradlinig
@@ -219,7 +269,6 @@ void DeltaPlanner::calcCubicPoint(float te, float t_i, float p_start, float p_en
 }
 
 //##########  CIRCLE FUNCTIONS   ##################################
-
 void DeltaPlanner::calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Eigen::Vector3d &p2,const Eigen::Vector3d &p3,Eigen::Vector3d &circCenter,Eigen::Vector3d &circAxis,double &circRadius){
   //Berechne Kreis anhand dreier Punkte, die auf dem Kreis liegen
   // triangle "edges"
@@ -246,7 +295,6 @@ void DeltaPlanner::calcCircleFromThreePoints(const Eigen::Vector3d &p1, const Ei
 
 
 }
-
 void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vector<float> &q, double theta,const Eigen::Vector3d &r)
 {
   //Punkt p um Winkel theta um Achse r rotieren, ergibt q
@@ -269,7 +317,6 @@ void DeltaPlanner::rotatePointAroundCircleAxis(const Eigen::Vector3d &p,std::vec
    q[2] += (costheta + (1 - costheta) * r[2] * r[2]) * p[2];
 
 }
-
 bool DeltaPlanner::circleInWorkspace(const Vector3d &circCenter, const Vector3d &circAxis, const double &circRadius)
 {
   //Überprüfen ob ausgewählter Kreis komplett im Arbeitsraum liegt
@@ -292,7 +339,7 @@ bool DeltaPlanner::circleInWorkspace(const Vector3d &circCenter, const Vector3d 
   }
   return true;
 }
-//##---WORKSPACE FUNCTIONS----##################################################
+//##   WORKSPACE FUNCTIONS      ##################################################
 int DeltaPlanner::readWorkSpace() {
   //Read Workspace values, given in csv files. Each file describes a convex polygon in the xy-pane
   char buffer[32] = { 0 };

@@ -66,7 +66,9 @@ add_dependencies(delta_qtgui ${delta_arduino_EXPORTED_TARGETS} ${catkin_EXPORTED
 add_library(kin src/delta_kinematics.cpp)
 add_library(dp src/delta_planner.cpp)
 add_library(dpr src/delta_posereader.cpp)
-target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${Eigen_LIBRARIES} yaml-cpp kin dp dpr)
+add_library(wsw src/delta_wswatchdog.cpp)
+add_library(dm src/delta_math.cpp)
+target_link_libraries(delta_qtgui ${QT_LIBRARIES} ${catkin_LIBRARIES} ${Eigen_LIBRARIES} yaml-cpp kin dp dpr wsw dm)
 
 install(TARGETS delta_qtgui RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

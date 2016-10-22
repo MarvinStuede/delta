@@ -18,6 +18,7 @@
 #include "delta_kinematics.h"
 #include "delta_planner.hpp"
 #include "delta_posereader.hpp"
+#include "delta_wswatchdog.hpp"
 #include <vector>
 #include <eigen3/Eigen/Dense>
 
@@ -42,15 +43,9 @@ public:
 
 	void ReadSettings(); // Load up qt program settings at startup
 	void WriteSettings(); // Save qt program settings when closing
-
 	void closeEvent(QCloseEvent *event); // Overloaded function
 	void showNoMasterMessage();
   void setTeachedPoint(std::string pointname);
-  void goCoordinatedLinear(float v);
-  void goUncoordinatedLinear();
-  void getCubicAngle(float qs, float qz, float te, float t, float ve,float &q, float &qd);
-  void goCubic(float vmax,float stepSize);
-  void goHouse(float vmax,float stepSize);
   void goPTP(const DeltaPlanner::InterpolationMode &mode);
   void goCircular();
 
@@ -68,11 +63,8 @@ public Q_SLOTS:
 	** Auto-connections (connectSlotsByName())
 	*******************************************/
 	void on_actionAbout_triggered();
-
   void on_resetButton_clicked();
-
   void on_disableButton_clicked();
-
   void on_enableButton_clicked();
   void on_Slider_X_valueChanged(int value);
   void on_Slider_Y_valueChanged(int value);
@@ -113,6 +105,7 @@ private:
   Kinematics kinematics;
   DeltaPlanner deltaplanner;
   delta_posereader::PoseMap poses;
+  WSWatchdog wswatchdog;
 
 };
 

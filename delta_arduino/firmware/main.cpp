@@ -310,15 +310,15 @@ void stateLoop()
           if (oldstate_ == STATE_INIT){
             nh.loginfo("STATE 'RESET': Starting, driving Motors to endstops");
 
-            //Delay zu starke Schwingungen beim losfahren zu vermeiden
-            delay(200);
-            a_stepper.setSpeed(stepsCircle/10);
-            b_stepper.setSpeed(stepsCircle/20);
-            c_stepper.setSpeed(stepsCircle/20);
+            //Delay um zu starke Schwingungen beim losfahren zu vermeiden
+            delay(300);
+            a_stepper.setMaxSpeed(stepsCircle/10);
+            b_stepper.setMaxSpeed(stepsCircle/20);
+            c_stepper.setMaxSpeed(stepsCircle/20);
             //Niedrige Beschleunigung (Schwingungsreduktion damit Motoren nicht überlasten)
-            a_stepper.setAcceleration(3000);
-            b_stepper.setAcceleration(3000);
-            c_stepper.setAcceleration(3000);
+            a_stepper.setAcceleration(2000);
+            b_stepper.setAcceleration(2000);
+            c_stepper.setAcceleration(2000);
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
@@ -327,9 +327,9 @@ void stateLoop()
           }
           else if (oldstate_ != state_){
             nh.loginfo("STATE 'RESET': Drive Motors to endstops");
-            a_stepper.setSpeed(stepsCircle/10);
-            b_stepper.setSpeed(stepsCircle/10);
-            c_stepper.setSpeed(stepsCircle/10);
+            a_stepper.setMaxSpeed(stepsCircle/10);
+            b_stepper.setMaxSpeed(stepsCircle/10);
+            c_stepper.setMaxSpeed(stepsCircle/10);
             a_stepper.move(130*stepsCircle/360);
             b_stepper.move(130*stepsCircle/360);
             c_stepper.move(130*stepsCircle/360);
@@ -413,8 +413,11 @@ void stateLoop()
             c_stepper.setMaxSpeed(stepsCircle/13);
             //Synchronisierte Multistepperbewegung
             steppers.moveTo(positions);
-            //Funktioniert blockiert, beim zurückfahren kein eingreifen zugelassen (Endstopüberprüfung hinzufügen!)
-            steppers.runSpeedToPosition();
+            //Funktion blockiert, beim zurückfahren kein eingreifen zugelassen
+            //steppers.runSpeedToPosition();
+            while(steppers.run()){
+              checkEndstops();
+            }
             //Einmal spinnen, damit ROS nicht meckert
             nh.spinOnce();
             //Linear zu Home fahren
@@ -426,9 +429,11 @@ void stateLoop()
             c_stepper.setMaxSpeed(stepsCircle/25);
 
             steppers.moveTo(positions);
-            steppers.runSpeedToPosition();
+            while(steppers.run()){
+              checkEndstops();
+            }
             stopCtrl();
-            oldstate_ = state_;
+            setState(STATE_OFF);
           }
 
           break;

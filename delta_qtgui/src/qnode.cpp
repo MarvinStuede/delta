@@ -204,7 +204,7 @@ void QNode::log( const LogLevel &level, const std::string &msg) {
 		}
 		case(Warn) : {
 				ROS_WARN_STREAM(msg);
-				logging_model_msg << "[INFO] [" << ros::Time::now() << "]: " << msg;
+        logging_model_msg << "[WARN] [" << ros::Time::now() << "]: " << msg;
 				break;
 		}
 		case(Error) : {

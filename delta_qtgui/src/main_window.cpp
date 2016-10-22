@@ -33,17 +33,18 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
   , qnode(argc,argv)
   ,kinematics(32,80,295,100)
   ,deltaplanner(qnode)
+  ,wswatchdog()
 {
 
 	ui.setupUi(this); // Calling this incidentally connects all ui's triggers to on_...() callbacks in this class.
     QObject::connect(ui.actionAbout_Qt, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt())); // qApp is a global variable for the application
 
     ReadSettings();
-	setWindowIcon(QIcon(":/images/icon.png"));
-	ui.tab_manager->setCurrentIndex(0); // ensure the first tab is showing - qt-designer should have this already hardwired, but often loses it (settings?).
+    setWindowIcon(QIcon(":/images/icon.png"));
+    ui.tab_manager->setCurrentIndex(0); // ensure the first tab is showing - qt-designer should have this already hardwired, but often loses it (settings?).
     QObject::connect(&qnode, SIGNAL(rosShutdown()), this, SLOT(close()));
 
-	ui.view_logging->setModel(qnode.loggingModel());
+    ui.view_logging->setModel(qnode.loggingModel());
     QObject::connect(&qnode, SIGNAL(loggingUpdated()), this, SLOT(updateLoggingView()));
     //Connection für anzeige aktueller Gelenkwinkel
     QObject::connect(&qnode, SIGNAL(JointStateUpdated(float, float, float)), this, SLOT(updateJointState(float, float, float)));
@@ -54,7 +55,13 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     if ( !qnode.init() ) {
       showNoMasterMessage();
     }
-    while(!(deltaplanner.readWorkSpace()==0));
+    if(!wswatchdog.readWorkSpace()){
+      qnode.log(QNode::Error,"Workspace Data not loaded");
+    }
+    else{
+     qnode.log(QNode::Info,"Workspace Data loaded");
+    }
+
     showValues();
     //Tastaturshortcuts
     QShortcut *scM = new QShortcut(QKeySequence("M"), this);
@@ -99,7 +106,7 @@ void MainWindow::showNoMasterMessage() {
 
 
 /*****************************************************************************
-** Implemenation [Slots][manually connected]
+** Implementation [Slots][manually connected]
 *****************************************************************************/
 
 void MainWindow::updateLoggingView() {
@@ -120,7 +127,9 @@ void MainWindow::updateJointState(float q0, float q1, float q2){
 
 }
 
-
+/*****************************************************************************
+** MainWindow Refresh Funktion
+*****************************************************************************/
 void MainWindow::showValues(){
 
   vector<float> q(3,0);
@@ -130,7 +139,7 @@ void MainWindow::showValues(){
   x[2] = (float)ui.Slider_Z->value() / 10;
 
 
-  int boundReturn = deltaplanner.giveBoundedPoint(x[0],x[1],x[2]);
+  int boundReturn = wswatchdog.giveBoundedPoint(x[0],x[1],x[2]);
   if(boundReturn==1){
      ui.label_workspace->setText("In Workspace");
      ui.label_workspace->setStyleSheet("QLabel {color : green}");
@@ -206,9 +215,9 @@ void MainWindow::showValues(){
   Vector3d p1(ui.led_CP1_X->text().toFloat(),ui.led_CP1_Y->text().toFloat(),ui.led_CP1_Z->text().toFloat());
   Vector3d p2(ui.led_CP2_X->text().toFloat(),ui.led_CP2_Y->text().toFloat(),ui.led_CP2_Z->text().toFloat());
   Vector3d p3(ui.led_CP3_X->text().toFloat(),ui.led_CP3_Y->text().toFloat(),ui.led_CP3_Z->text().toFloat());
-  deltaplanner.calcCircleFromThreePoints(p1,p2,p3,circCenter,circAxis,circRadius);
+  delta_math::calcCircleFromThreePoints(p1,p2,p3,circCenter,circAxis,circRadius);
 
-  if(deltaplanner.circleInWorkspace(circCenter,circAxis,circRadius)){
+  if(wswatchdog.circleInWorkspace(circCenter,circAxis,circRadius)){
     ui.label_workspace_circle->setText("Circle in Workspace");
     ui.label_workspace_circle->setStyleSheet("QLabel {color : green}");
     ui.sendButton->setEnabled(true);
@@ -230,8 +239,10 @@ void MainWindow::goPTP(const DeltaPlanner::InterpolationMode &mode){
     pos_end[0] = (float)ui.Slider_X->value() / 10;
     pos_end[1]  = (float)ui.Slider_Y->value() / 10;
     pos_end[2]  = (float)ui.Slider_Z->value() / 10;
+
     float vmax= ui.speedBox->text().toFloat();
     float stepSize= ui.stepsizeEd->text().toFloat();
+
     if(mode == DeltaPlanner::NONE)
       deltaMov->movePTP(pos_end,vmax,stepSize,mode);
     else{
@@ -262,123 +273,7 @@ void MainWindow::goCircular(){
       deltaMov->moveCircular(circlePoints,angle,vmax,stepSize);
 
 }
-void MainWindow::goHouse(float vmax,float stepSize){
-  string state = qnode.getDeltaInfo("GETSTATE");
 
-  if(state.compare("WAITING")==0){
-    vector<float> q_end(3,0);
-    vector<float> q_start(3,0);
-    vector<float> q(3,0);
-    vector<float> dq(3,0);
-    vector<float> pos_start(3,0);
-    vector<float> pos_end(3,0);
-    vector<float> xi(3,0);
-    vector<float> dxi(3,0);
-    vector< vector<float> > arr(10, vector<float>(3));
-    stringstream ss;
-
-    arr[0][0]=-30;
-    arr[0][1]=-30;
-    arr[0][2]=-310.3;
-
-    arr[1][0]=30;
-    arr[1][1]=-30;
-    arr[1][2]=-310.3;
-
-    arr[2][0]=-30;
-    arr[2][1]=30;
-    arr[2][2]=-310.3;
-
-    arr[3][0]=30;
-    arr[3][1]=30;
-    arr[3][2]=-310.3;
-
-    arr[4][0]=0;
-    arr[4][1]=60;
-    arr[4][2]=-310.3;
-
-    arr[5][0]=-30;
-    arr[5][1]=30;
-    arr[5][2]=-310.3;
-
-    arr[6][0]=-30;
-    arr[6][1]=-30;
-    arr[6][2]=-310.3;
-
-    arr[7][0]=30;
-    arr[7][1]=30;
-    arr[7][2]=-310.3;
-
-    arr[8][0]=30;
-    arr[8][1]=-30;
-    arr[8][2]=-310.3;
-
-    arr[9][0]=0;
-    arr[9][1]=0;
-    arr[9][2]=-284;
-
-
-    float te = 0;
-    for(int p = 0; p<10;p++){
-          pos_end[0] = arr[p][0];
-          pos_end[1] = arr[p][1];
-          pos_end[2] = arr[p][2];
-          ss.str("");
-          ss << "Moving to x: "<<pos_end[0]<<", y: "<<pos_end[1]<<", z: "<<pos_end[2];
-          qnode.log(QNode::Info,ss.str());
-          qnode.getDeltaAngles("GETANGLES", q_start);
-
-          bool moveCart = ui.radioCartCubic->isChecked();
-          kinematics.delta_calcInverse(pos_end,q_end);
-          kinematics.delta_calcForward(q_start,pos_start);
-          kinematics.rad2deg(q_end);
-
-          float tj = 0;
-          for(int j=0;j<3;j++){
-              tj=fabs(1.5*(q_end[j] - q_start[j]) / vmax);
-              if (tj > te) te = tj;
-           }
-
-          ros::Time endTime = ros::Time::now() + ros::Duration(te);
-          ros::Time startTime = ros::Time::now();
-          ros::Rate rate(1/stepSize);
-
-          vector<float> dq_end(3,0);
-
-          while(ros::ok() && ros::Time::now()<= endTime){
-            ros::Duration tr = ros::Time::now() - startTime;
-            double t = tr.toSec();
-
-            if(moveCart){
-              deltaplanner.getCubicCartesian(te,t,pos_start,pos_end,xi,dxi,q,dq);
-              kinematics.rad2deg(q);
-            }
-            else{
-
-              deltaplanner.getCubicAngle(te,t,q_start,q_end,q,dq);
-              kinematics.delta_calcForward(q,xi);
-            }
-
-            qnode.sendDeltaCart(xi);
-            dq[0]=40;
-            dq[1]=40;
-            dq[2]=40;
-            qnode.sendDeltaAngle(q,dq);
-            ros::spinOnce();
-            qApp->processEvents();
-            if(ui.stopButton->isDown()){
-             //Beide schleifen verlassen
-             p=10;
-             break;
-             }
-            rate.sleep();
-          }
-        }
-
-
-     ros::Duration(0.5).sleep();
-  }
-}
 void MainWindow::stopMotion(){
   qnode.sendDeltaCmd("STOPMOVE");
 }
@@ -388,8 +283,6 @@ void MainWindow::setTeachedPoint(std::string pointname){
      ui.Slider_Y->setValue(poses[pointname].y*10);
      ui.Slider_Z->setValue(poses[pointname].z*10);
      showValues();
-
-
 }
 void MainWindow::setPoseListEntries(){
 //Listboxeinträge auf Map (YAML) Inhalt setzen
@@ -439,7 +332,7 @@ void MainWindow::on_houseButton_clicked()
 {
   float vmax= ui.speedBox->text().toFloat();
   float stepSize= ui.stepsizeEd->text().toFloat();
-  goHouse(vmax,stepSize);
+  //goHouse(vmax,stepSize);
 }
 void MainWindow::on_stopButton_clicked()
 {
@@ -474,9 +367,19 @@ void MainWindow::on_button_teachPoint_clicked()
   delta_posereader::write(poses);
   setPoseListEntries();
   ui.button_teachPoint->setEnabled(false);
-  deltaMov->movePTP(pointname);
+  //deltaMov->movePTP(pointname);
 
 }
+void MainWindow::on_button_drawCross_clicked()
+{
+    std::vector<float> pos(3,0);
+    pos[0] = (float)ui.Slider_X->value() / 10;
+    pos[1] = (float)ui.Slider_Y->value() / 10;
+    pos[2] = (float)ui.Slider_Z->value() / 10;
+    float vmax = ui.speedBox->text().toFloat();
+    deltaMov->drawYAML("cross.yaml",pos,vmax);
+}
+
 void MainWindow::on_actionAbout_triggered() {
     QMessageBox::about(this, tr("About ..."),tr("<h2>PACKAGE_NAME Delta QtGUI</h2><p>Copyright Marvin Stüde/p><p>-</p>"));
 }
@@ -531,6 +434,16 @@ void MainWindow::on_led_radius_returnPressed()
 {
     showValues();
 }
+void MainWindow::on_led_pointName_textEdited(const QString &arg1)
+{
+  //Button zum teachen nur aktivieren wenn Name noch nicht vorhanden
+  ui.button_teachPoint->setEnabled(!(poses.find(arg1.toStdString()) != poses.end()));
+
+}
+void MainWindow::on_listPoses_itemClicked(QListWidgetItem *item)
+{
+       setTeachedPoint(item->text().toStdString());
+}
 //########### RADIO BUTTONS #############################
 void MainWindow::on_radioCircular_clicked()
 {
@@ -547,27 +460,6 @@ void MainWindow::on_radioLinear_clicked()
 void MainWindow::on_radioContinuous_clicked()
 {
     showValues();
-}
-
-
-void MainWindow::on_led_pointName_textEdited(const QString &arg1)
-{
-  //Button zum teachsen nur aktivieren wenn Name noch nicht vorhanden
-  ui.button_teachPoint->setEnabled(!(poses.find(arg1.toStdString()) != poses.end()));
-
-}
-void MainWindow::on_listPoses_itemClicked(QListWidgetItem *item)
-{
-       setTeachedPoint(item->text().toStdString());
-}
-void MainWindow::on_button_drawCross_clicked()
-{
-    std::vector<float> pos(3,0);
-    pos[0] = (float)ui.Slider_X->value() / 10;
-    pos[1] = (float)ui.Slider_Y->value() / 10;
-    pos[2] = (float)ui.Slider_Z->value() / 10;
-    float vmax = ui.speedBox->text().toFloat();
-    deltaMov->drawYAML("cross.yaml",pos,vmax);
 }
 
 

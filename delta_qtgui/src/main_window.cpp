@@ -321,7 +321,7 @@ void MainWindow::on_resetButton_clicked(){
     qnode.sendDeltaCmd("RESET");
     ui.Slider_X->setValue(0);
     ui.Slider_Y->setValue(0);
-    ui.Slider_Z->setValue(-284 * 10);
+    ui.Slider_Z->setValue(-253 * 10);
     showValues();
 }
 void MainWindow::on_homeButton_clicked()
@@ -343,7 +343,7 @@ void MainWindow::on_resetTopButton_clicked()
 {
   ui.Slider_X->setValue(0);
   ui.Slider_Y->setValue(0);
-  ui.Slider_Z->setValue(-284 * 10);
+  ui.Slider_Z->setValue(-253 * 10);
   showValues();
 }
 void MainWindow::on_gripopenButton_clicked()

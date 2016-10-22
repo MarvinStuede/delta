@@ -14,9 +14,9 @@
 #include "delta_planner.hpp"
 
 #define XY_LEN			100
-#define Z_MAX			-284
+#define Z_MAX			-253
 #define Z_MIN			-390
-#define Z_ROWS			107
+#define Z_ROWS			138
 
 class WSWatchdog
 {
